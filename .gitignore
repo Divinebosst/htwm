@@ -1,0 +1,15 @@
+# Python / Django
+backend/.venv/
+__pycache__/
+*.pyc
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+backend/.env
+
+# Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+frontend/.env*.local
+*.tsbuildinfo
