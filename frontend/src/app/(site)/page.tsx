@@ -40,8 +40,8 @@ function Hero() {
     <section className="hero" aria-labelledby="hero-title">
       <Rays variant="hero" />
       <div className="wrap">
+        <p className="eyebrow hero-eyebrow">Omega Family Church</p>
         <div className="hero-copy">
-          <p className="eyebrow">Omega Family Church</p>
           <h1 id="hero-title">
             Changing lives. <span className="line2">Reviving nations.</span>
           </h1>
