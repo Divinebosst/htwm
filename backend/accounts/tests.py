@@ -89,7 +89,7 @@ class SignInTests(StaffTestCase):
         self.assertEqual(boss.staff_profile.role, SYSTEM_ADMIN)
 
     def test_django_admin_lists_open_for_system_admin(self):
-        """Every built-in admin list loads (MySQL without time zone tables included)."""
+        """Every built-in admin list loads for a System Admin."""
         Event.objects.create(title="Crusade", starts_at=timezone.now() + timedelta(days=3), summary="x")
         Gift.objects.create(category=GivingCategory.objects.get(key="tithe"), amount=10, currency="USD",
                             method="bank", reference="TITHE-X")

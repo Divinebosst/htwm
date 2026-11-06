@@ -5,7 +5,7 @@ Church website for **Heal The World Ministries International (Omega Family Churc
 | Part | Built with | What it does |
 |---|---|---|
 | `frontend/` | Next.js 16 (React, TypeScript) | The public website (home page with upcoming events, events pages, giving page, prayer request form) and the **staff admin** at `/admin` |
-| `backend/` | Django 5.2 + Django REST Framework + **MySQL** | The API, staff sign-in, roles and permissions, and the audit log |
+| `backend/` | Django 5.2 + Django REST Framework | The API, staff sign-in, roles and permissions, and the audit log |
 
 ```
 Visitor ─────► Next.js website ──(/api/*)──► Django API ──► database
@@ -71,33 +71,12 @@ Django's own built-in admin is still available at `/django-admin/` on the backen
 
 ## Run it on your computer
 
-You need **Python 3.12+**, **Node.js 20+** and **MySQL 8.0+** (MariaDB 10.6+ also works).
+You need **Python 3.12+** and **Node.js 20+**.
 
-### 1. Database (MySQL)
-
-The Python MySQL driver is compiled when it installs, so it needs MySQL's client library first:
-
-- Ubuntu / Debian: `sudo apt install default-libmysqlclient-dev pkg-config build-essential python3-dev`
-- macOS: `brew install mysql pkg-config`
-- Windows: nothing extra; a ready-made driver is downloaded.
-
-Then create the database and a user for the site in MySQL (choose your own password):
-
-```sql
-CREATE DATABASE htwm CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-CREATE USER 'htwm'@'localhost' IDENTIFIED BY 'choose-a-password';
-GRANT ALL PRIVILEGES ON htwm.* TO 'htwm'@'localhost';
--- only needed to run the tests:
-GRANT ALL PRIVILEGES ON test_htwm.* TO 'htwm'@'localhost';
-```
-
-`utf8mb4` matters: it stores names and messages in any language, including emoji.
-
-### 2. Backend (Django)
+### 1. Backend (Django)
 
 ```bash
 cd backend
-cp .env.example .env               # then set MYSQL_PASSWORD (and the other MYSQL_ values if different)
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -109,7 +88,7 @@ python manage.py runserver
 
 `load_sample_content` adds **example** service times and six **example** events so the site isn't empty. Edit or delete them in the admin, or remove them all with `python manage.py load_sample_content --clear`.
 
-### 3. Frontend (Next.js)
+### 2. Frontend (Next.js)
 
 In a second terminal:
 
@@ -166,26 +145,10 @@ with these environment variables (see `backend/.env.example`):
 | `DJANGO_ALLOWED_HOSTS` | `www.healtheworldministries.com` |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://www.healtheworldministries.com` (staff can't sign in without it) |
 | `DJANGO_PROXY_COUNT` | `1` (see below) |
-| `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST`, `MYSQL_PORT` | your MySQL database's details |
 
 Frontend: `DJANGO_API_URL=http://127.0.0.1:8000` and `SITE_URL=https://www.healtheworldministries.com`, then `npm run build && npm start`. Set them **before** building, with the backend running, so the pages are built with real content.
 
-**Database:** any MySQL 8.0+ or MariaDB 10.6+ works, on the same server or a managed one from your host. Create it with `utf8mb4` as shown above. Back it up regularly, e.g. every night with `mysqldump --single-transaction htwm > backup.sql`, and keep `backend/media/` (event pictures) on a disk that survives restarts.
-
-**Moving data from an older SQLite copy** (only if you already have data to keep). With the older version of the code (commit `4ee0f42`) still pointing at `db.sqlite3`:
-
-```bash
-python manage.py dumpdata --natural-foreign --natural-primary --exclude contenttypes --exclude auth.permission --exclude sessions --exclude admin.logentry -o data.json
-```
-
-Then with this version, connected to the new, empty MySQL database:
-
-```bash
-python manage.py migrate
-python manage.py loaddata data.json
-```
-
-Staff accounts, roles, passwords, events, gifts, prayer requests and the audit log all come across.
+The database is SQLite in `backend/db.sqlite3`. Keep it on a persistent disk and back it up, along with `backend/media/` (event pictures).
 
 ### Visitors' real IP addresses (`DJANGO_PROXY_COUNT`)
 
@@ -228,6 +191,6 @@ Staff (session cookie + CSRF token; permissions as in the roles table):
 ## Tests and checks
 
 ```bash
-cd backend && python manage.py test              # 49 tests on MySQL: API, every role, accounts, audit log
+cd backend && python manage.py test              # 49 tests: API, every role, accounts, audit log
 cd frontend && npm run lint && npx tsc --noEmit  # code checks
 ```
