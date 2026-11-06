@@ -6,6 +6,7 @@ from environment variables (see .env.example).
 """
 
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,7 +17,8 @@ def env_bool(name, default=False):
 
 
 def env_list(name, default=""):
-    return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
+    # An empty value (e.g. copied from .env.example) means "use the default"
+    return [item.strip() for item in (os.environ.get(name) or default).split(",") if item.strip()]
 
 
 # Load a local .env file if present (simple KEY=VALUE lines, no extra package needed)
@@ -37,7 +39,11 @@ if not SECRET_KEY:
     SECRET_KEY = "dev-only-insecure-key-change-me"
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
-CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+# The Next.js site (which passes /api through to Django) must be listed here,
+# e.g. https://www.healtheworldministries.com, or staff can't sign in.
+CSRF_TRUSTED_ORIGINS = env_list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000" if DEBUG else ""
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -49,6 +55,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "church",
+    "accounts",
+    "audit",
 ]
 
 MIDDLEWARE = [
@@ -59,6 +67,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "audit.context.AuditContextMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -88,6 +97,9 @@ DATABASES = {
         "NAME": os.environ.get("DJANGO_SQLITE_PATH", str(BASE_DIR / "db.sqlite3")),
     }
 }
+
+if "test" in sys.argv:  # faster logins in the test suite only
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -130,9 +142,25 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "gifts": os.environ.get("THROTTLE_GIFTS", "30/hour"),
         "prayer": os.environ.get("THROTTLE_PRAYER", "10/hour"),
+        "login_burst": os.environ.get("THROTTLE_LOGIN_BURST", "8/minute"),
+        "login_hourly": os.environ.get("THROTTLE_LOGIN_HOURLY", "40/hour"),
     },
+    # How many proxies in front of Django add the visitor's address to X-Forwarded-For.
+    # Used to find the real address for rate limits and the audit log (see README).
+    # Note: Next.js's /api pass-through does NOT add it; a front proxy such as Caddy does.
+    "NUM_PROXIES": int(os.environ.get("DJANGO_PROXY_COUNT", "1")) or None,
     "UNAUTHENTICATED_USER": None,
 }
+
+# Staff sessions: signed out after 4 hours without activity
+SESSION_COOKIE_AGE = int(os.environ.get("DJANGO_SESSION_SECONDS", str(4 * 60 * 60)))
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+
+# Event pictures
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

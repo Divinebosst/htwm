@@ -4,27 +4,70 @@ Church website for **Heal The World Ministries International (Omega Family Churc
 
 | Part | Built with | What it does |
 |---|---|---|
-| `frontend/` | Next.js 16 (React, TypeScript) | The public website: home page with upcoming events, events pages, giving page, prayer request form |
-| `backend/` | Django 5.2 + Django REST Framework | The API and an **admin panel** where church staff manage events, service times, payment details, gifts and prayer requests |
+| `frontend/` | Next.js 16 (React, TypeScript) | The public website (home page with upcoming events, events pages, giving page, prayer request form) and the **staff admin** at `/admin` |
+| `backend/` | Django 5.2 + Django REST Framework | The API, staff sign-in, roles and permissions, and the audit log |
 
 ```
-Visitor ──► Next.js website ──(/api/*)──► Django API ──► database
-                                            ▲
-Church staff ──► Django admin (/admin) ─────┘
+Visitor ─────► Next.js website ──(/api/*)──► Django API ──► database
+Church staff ─► /admin pages ────┘                │
+                                                  └─► audit log (every sign-in and change)
 ```
 
-## What church staff can do in the admin
+## The staff admin (`/admin`)
 
-Open the admin at `http://localhost:8000/admin` (or your live backend address) and log in.
+Staff sign in at **`/admin`** on the website (for example `http://localhost:3000/admin`). What they see depends on their role.
 
-- **Events**: add crusades, conferences and special services with dates, location, a summary, full details and an optional picture. Tick *featured* to show an event first on the home page. Past events move to the "Past events" list on their own.
-- **Service times**: the weekly schedule shown on the home page.
-- **Church settings**: phone numbers, WhatsApp number, links, and all giving details (EcoCash merchant code, bank account, card/PayPal link, details for gifts from abroad). Anything left empty shows on the giving page as "To be added".
-- **Giving categories**: Tithe, Offering, Seed, Building fund and so on. Add a new one (for example a special project) and it appears on the giving page.
-- **Gifts**: every time someone taps "I've sent my gift", a record is saved with the amount, method and payment reference (e.g. `TITHE-MOYO`). The finance team matches it against the EcoCash or bank statement, then selects it and chooses **Mark selected gifts as received**. The list shows the total received.
-- **Prayer requests**: requests and testimonies from the website. Mark them as prayed for once the team has prayed.
+### Roles
 
-Changes show on the website within about a minute.
+| | System Admin | Admin | Pastor | Caretaker |
+|---|:-:|:-:|:-:|:-:|
+| Dashboard | ✓ | ✓ | ✓ | ✓ |
+| Add and edit events (with pictures) | ✓ | ✓ | ✓ | ✓ |
+| Edit service times | ✓ | ✓ | ✓ | ✓ |
+| Read prayer requests | ✓ | ✓ | ✓ | |
+| Read **private** prayer requests | ✓ | | ✓ | |
+| Update prayer requests (status, notes) | ✓ | | ✓ | |
+| See gifts | ✓ | ✓ | ✓ | |
+| Confirm gifts (mark received) | ✓ | ✓ | | |
+| Edit giving categories | ✓ | ✓ | | |
+| See church settings / edit contact details | ✓ | ✓ | | |
+| Edit **payment details** (bank, EcoCash, card link) | ✓ | | | |
+| Manage staff accounts | All roles | Pastors and Caretakers | | |
+| Read the audit log | ✓ | ✓ | | |
+
+The rules live in one file, `backend/accounts/roles.py`. The API checks them on every request, so hiding a menu item is never the only protection. Some choices worth knowing:
+
+- **Private prayer requests** are only shown to Pastors and System Admins, because the prayer form promises "only the pastors and prayer team will read it".
+- **Payment details** can only be changed by a System Admin, so a stolen Admin password can't redirect the church's money. Every change is logged with the old and new values.
+- **Accounts are switched off, never deleted**, so the audit log always says who did what. Nobody can change their own role, and the last active System Admin can't be removed.
+
+### Audit log
+
+The audit log records every sign-in, failed sign-in, sign-out, password change or reset, refused access attempt, and every create, change and delete of events, service times, settings, giving categories, gifts, prayer requests and staff accounts. Each entry has who did it (and their role at the time), when, from which IP address and device, and what changed (before and after).
+
+- Entries **can't be edited or deleted** by anyone, through the admin or the code.
+- Personal details stay out of the log: for prayer requests only the type, privacy flag and status are recorded, never the name, contact or message.
+- Changes made on the public website (gifts, prayer requests) are logged as "Public website".
+
+### Other protections
+
+- Sessions end after 4 hours without activity (`DJANGO_SESSION_SECONDS`).
+- Sign-in is limited to 8 attempts a minute and 40 an hour per address.
+- New accounts and password resets get a **temporary password**, shown once. The person must choose their own password before they can do anything else.
+- All changes need Django's CSRF token, and the session cookie can't be read by scripts.
+
+### First sign-in
+
+Create the first System Admin on the server:
+
+```bash
+cd backend
+python manage.py createsuperuser
+```
+
+Sign in at `/admin` with it, then add everyone else under **Staff accounts**.
+
+Django's own built-in admin is still available at `/django-admin/` on the backend, for System Admins only, as a fallback.
 
 ## Run it on your computer
 
@@ -38,7 +81,7 @@ python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py createsuperuser   # your admin login
+python manage.py createsuperuser   # your System Admin login
 python manage.py load_sample_content
 python manage.py runserver
 ```
@@ -56,11 +99,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000 for the website and http://localhost:3000/admin for the staff admin.
 
-## Before going live: fill these in (in the admin)
+## Before going live: fill these in
 
-1. **Church settings → Giving**: EcoCash merchant code, bank details, card/PayPal link, and who collects money sent from abroad.
+1. **Church settings → Payment details** (System Admin): EcoCash merchant code, bank details, card/PayPal link, and who collects money sent from abroad.
 2. **Service times**: the sample times (Sunday 10:00 AM, Wednesday 5:30 PM, Friday 6:00 PM) are made up.
 3. **Events**: replace the sample events with real ones.
 4. **Phone numbers**: the flier shows `0770772105160`, which has too many digits. Please confirm it.
@@ -68,29 +111,57 @@ Open http://localhost:3000.
 6. **Time zone**: event times are shown in `Africa/Harare`. Change `DJANGO_TIME_ZONE` if the church is elsewhere.
 7. **Photos**: the logo and photo were cut from the flier. Replace `frontend/src/assets/logo.png` and `apostles.jpg` with sharper originals.
 
+Edits made in the admin show on the website straight away. A single event's own page may show the old version for one more page load while it rebuilds; everything updates within a minute at most.
+
 ## Putting it online
 
-The two parts are hosted separately.
+### Recommended: one server, one domain
 
-**Backend** (any Python host, e.g. Railway, Render, PythonAnywhere or a VPS):
+Run both parts on one server behind a web server that handles HTTPS, such as Caddy or nginx. It sends `/api`, `/media`, `/static` and `/django-admin` to Django and everything else to Next.js. Example Caddy configuration (adjust the domain):
+
+```
+www.healtheworldministries.com {
+    @django path /api/* /media/* /static/* /django-admin/*
+    reverse_proxy @django 127.0.0.1:8000
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+Backend:
 
 ```bash
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
-gunicorn config.wsgi --bind 0.0.0.0:8000
+gunicorn config.wsgi --bind 127.0.0.1:8000
 ```
 
-Set these environment variables (see `backend/.env.example`): `DJANGO_DEBUG=false`, a long random `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS` (your backend domain) and `DJANGO_CSRF_TRUSTED_ORIGINS` (e.g. `https://api.healtheworldministries.com`). The database is SQLite in `backend/db.sqlite3`. Keep that file on a persistent disk and back it up, along with `backend/media/` (event pictures).
+with these environment variables (see `backend/.env.example`):
 
-**Frontend** (Vercel, Netlify, or the same VPS with `npm run build && npm start`):
+| Variable | Value |
+|---|---|
+| `DJANGO_DEBUG` | `false` |
+| `DJANGO_SECRET_KEY` | a long random value |
+| `DJANGO_ALLOWED_HOSTS` | `www.healtheworldministries.com` |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://www.healtheworldministries.com` (staff can't sign in without it) |
+| `DJANGO_PROXY_COUNT` | `1` (see below) |
 
-- `DJANGO_API_URL`: address of the live backend, e.g. `https://api.healtheworldministries.com`
-- `SITE_URL`: the public website address, e.g. `https://www.healtheworldministries.com`
+Frontend: `DJANGO_API_URL=http://127.0.0.1:8000` and `SITE_URL=https://www.healtheworldministries.com`, then `npm run build && npm start`. Set them **before** building, with the backend running, so the pages are built with real content.
 
-Set both **before** running `npm run build`, with the backend already running, so the pages are built with real content.
+The database is SQLite in `backend/db.sqlite3`. Keep it on a persistent disk and back it up, along with `backend/media/` (event pictures).
+
+### Visitors' real IP addresses (`DJANGO_PROXY_COUNT`)
+
+The audit log and the rate limits need each visitor's real address. Web servers like Caddy add it to the `X-Forwarded-For` header; `DJANGO_PROXY_COUNT` tells Django how many such servers sit in front of it, so it reads the right entry and ignores anything a visitor made up.
+
+- One server behind Caddy or nginx: `1`.
+- Frontend and backend on separate hosts (e.g. Vercel + Render): usually `2`.
+
+Next.js's own `/api` pass-through does **not** add the address. Without a web server in front, as on your computer, the address in the log can be faked, which only matters on a live site. After going live, sign in once and check that the audit log shows your real IP address.
 
 ## API
+
+Public:
 
 | Method | Path | Returns |
 |---|---|---|
@@ -99,14 +170,27 @@ Set both **before** running `npm run build`, with the backend already running, s
 | GET | `/api/events` | Upcoming events. `?limit=3`, `?when=past` |
 | GET | `/api/events/<slug>` | One event |
 | GET | `/api/giving-categories` | Tithe, Offering, … |
-| POST | `/api/gifts` | Records a gift: `category`, `amount`, `method` (`ecocash`, `bank`, `card`, `abroad`), `giver_name`, `giver_contact`, `anonymous`, `purpose` |
-| POST | `/api/prayer-requests` | Saves a request: `name`, `contact`, `kind` (`prayer`, `testimony`, `counselling`), `message`, `is_private` |
+| POST | `/api/gifts` | Records a gift |
+| POST | `/api/prayer-requests` | Saves a prayer request |
 
-The two POST endpoints are rate-limited per visitor (30 gifts / 10 prayer requests per hour) and the prayer form has a hidden spam trap.
+Staff (session cookie + CSRF token; permissions as in the roles table):
+
+| Path | What |
+|---|---|
+| `/api/auth/csrf`, `login`, `logout`, `me`, `roles`, `password` | Signing in and out, who am I, change own password |
+| `/api/admin/dashboard` | Figures for the dashboard (only the parts your role may see) |
+| `/api/admin/events`, `/events/<id>`, `/events/<id>/image` | Events and their pictures |
+| `/api/admin/services`, `/services/<id>` | Service times |
+| `/api/admin/prayer-requests`, `/<id>` | Prayer requests |
+| `/api/admin/gifts`, `/gifts/<id>`, `/gifts/bulk` | Gifts, including marking many as received |
+| `/api/admin/giving-categories`, `/<id>` | Giving categories |
+| `/api/admin/settings` | Church settings |
+| `/api/admin/users`, `/users/<id>`, `/users/<id>/reset-password` | Staff accounts |
+| `/api/admin/audit` | Audit log with filters |
 
 ## Tests and checks
 
 ```bash
-cd backend && python manage.py test church       # 15 API tests
+cd backend && python manage.py test              # 47 tests: API, every role, accounts, audit log
 cd frontend && npm run lint && npx tsc --noEmit  # code checks
 ```

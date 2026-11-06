@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Lora, Source_Sans_3 } from "next/font/google";
-import SiteHeader from "@/components/SiteHeader";
-import { SiteFooter, TopBar } from "@/components/SiteChrome";
 import "./globals.css";
 
 const display = Barlow_Condensed({
@@ -47,12 +45,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} ${scripture.variable}`}>
-      <body>
-        <TopBar />
-        <SiteHeader />
-        <main>{children}</main>
-        <SiteFooter />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

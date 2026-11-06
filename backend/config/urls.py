@@ -5,12 +5,16 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.static import serve
 
-admin.site.site_header = "Heal The World Ministries · Church admin"
+from accounts.urls import auth_urlpatterns
+
+admin.site.site_header = "Heal The World Ministries · System admin"
 admin.site.site_title = "Church admin"
 admin.site.index_title = "Manage the website"
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("django-admin/", admin.site.urls),  # Django's built-in admin, System Admins only
+    path("api/auth/", include(auth_urlpatterns)),
+    path("api/admin/", include("config.admin_api_urls")),
     path("api/", include("church.urls")),
 ]
 

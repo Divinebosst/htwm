@@ -469,7 +469,8 @@ body::before {
 .field.full { grid-column: 1 / -1; }
 .field label, .label { font-weight: 600; color: var(--ink); font-size: 0.98rem; }
 .field .hint { font-size: 0.9rem; color: var(--muted); }
-input[type="text"], input[type="email"], input[type="tel"], input[type="number"], select, textarea {
+input:not([type]), input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="url"],
+input[type="password"], input[type="search"], input[type="date"], input[type="time"], input[type="datetime-local"], select, textarea {
   width: 100%;
   min-height: 48px;
   padding: 10px 14px;
