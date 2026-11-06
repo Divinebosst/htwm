@@ -572,17 +572,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
    GIVE PAGE
    ================================================================ */
 .page-hero { position: relative; overflow: hidden; background: var(--paper); border-bottom: 1px solid var(--line); }
-.page-hero .wrap { position: relative; z-index: 1; display: grid; gap: 18px; padding-block: clamp(48px, 7vw, 88px) clamp(80px, 10vw, 120px); }
+.page-hero .wrap { position: relative; z-index: 1; display: grid; gap: 18px; padding-block: clamp(40px, 6vw, 80px) clamp(44px, 5vw, 64px); }
 .page-hero h1 { font-size: clamp(2.8rem, 6.5vw, 5rem); font-weight: 800; text-transform: uppercase; line-height: 0.92; max-width: 14ch; }
 .page-hero h1 span { color: var(--accent); }
 .page-hero .scripture { border: 0; padding: 0; max-width: 52ch; font-size: 1.15rem; }
 .page-hero .rays { height: 100%; }
+/* Content right after a page heading starts sooner than a normal section */
+.page-hero + .section { padding-top: clamp(28px, 4vw, 48px); }
 @media (max-width: 760px) {
-  .page-hero .wrap { padding-bottom: 170px; }
-  .page-hero .rays { height: 150px; }
+  .page-hero .wrap { padding-bottom: 84px; }
+  .page-hero .rays { height: 72px; }
 }
 
-.give-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 32px; align-items: start; padding-block: 48px 72px; }
+.give-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 32px; align-items: start; padding-block: clamp(28px, 4vw, 48px) 72px; }
 @media (max-width: 980px) { .give-layout { grid-template-columns: 1fr; } }
 
 .steps { display: grid; gap: 20px; }
@@ -817,7 +819,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .event-hero .event-meta { font-size: 1.12rem; color: var(--ink); font-weight: 600; }
 .event-hero .event-meta svg { color: var(--accent); width: 20px; height: 20px; }
 .event-actions { display: flex; flex-wrap: wrap; gap: 12px; }
-.event-body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: clamp(28px, 5vw, 64px); align-items: start; padding-block: 48px 80px; }
+.event-body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: clamp(28px, 5vw, 64px); align-items: start; padding-block: clamp(28px, 4vw, 48px) 80px; }
 .event-body .prose { display: grid; gap: 18px; font-size: 1.12rem; max-width: 65ch; }
 .event-body .prose img { border-radius: var(--radius); }
 .event-aside { display: grid; gap: 16px; }
