@@ -52,6 +52,25 @@ class SignInTests(StaffTestCase):
         self.assertNotIn("settings.edit_payment", body["permissions"])
         self.assertEqual(c.get("/api/auth/me").json()["username"], "office")
 
+    def test_untrusted_site_address_gets_a_clear_message(self):
+        """A website address missing from DJANGO_CSRF_TRUSTED_ORIGINS is explained, then works once added."""
+        from django.test import override_settings
+
+        c = APIClient(enforce_csrf_checks=True)
+        c.get("/api/auth/csrf")
+        token = c.cookies["csrftoken"].value
+        login = {"username": "office", "password": PASSWORD}
+        res = c.post("/api/auth/login", login, format="json", HTTP_X_CSRFTOKEN=token,
+                     HTTP_ORIGIN="https://htwm.vercel.app")
+        self.assertEqual(res.status_code, 403)
+        self.assertEqual(res.json()["code"], "csrf_untrusted_origin")
+        self.assertIn("https://htwm.vercel.app", res.json()["detail"])
+        self.assertIn("DJANGO_CSRF_TRUSTED_ORIGINS", res.json()["detail"])
+        with override_settings(CSRF_TRUSTED_ORIGINS=["https://htwm.vercel.app"]):
+            res = c.post("/api/auth/login", login, format="json", HTTP_X_CSRFTOKEN=token,
+                         HTTP_ORIGIN="https://htwm.vercel.app")
+        self.assertEqual(res.status_code, 200, res.content)
+
     def test_wrong_password_is_rejected_and_logged(self):
         res = APIClient().post("/api/auth/login", {"username": "office", "password": "nope"}, format="json")
         self.assertEqual(res.status_code, 400)

@@ -44,6 +44,7 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000" if DEBUG else ""
 )
+CSRF_FAILURE_VIEW = "config.csrf.csrf_failure"  # explains refusals instead of a bare 403 page
 
 INSTALLED_APPS = [
     "django.contrib.admin",

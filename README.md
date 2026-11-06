@@ -150,6 +150,20 @@ Frontend: `DJANGO_API_URL=http://127.0.0.1:8000` and `SITE_URL=https://www.healt
 
 The database is SQLite in `backend/db.sqlite3`. Keep it on a persistent disk and back it up, along with `backend/media/` (event pictures).
 
+### Frontend on Vercel, backend on another host
+
+If the website runs on Vercel (e.g. `https://htwm.vercel.app`) and Django runs elsewhere:
+
+| Where | Variable | Value |
+|---|---|---|
+| Vercel | `DJANGO_API_URL` | the backend's public address, e.g. `https://htwm-api.onrender.com` |
+| Vercel | `SITE_URL` | `https://htwm.vercel.app` (or your custom domain) |
+| Backend | `DJANGO_ALLOWED_HOSTS` | the backend's own host, e.g. `htwm-api.onrender.com` |
+| Backend | `DJANGO_CSRF_TRUSTED_ORIGINS` | **every address the website is opened on**, comma separated, e.g. `https://htwm.vercel.app,https://www.healtheworldministries.com` |
+| Backend | `DJANGO_PROXY_COUNT` | usually `2` |
+
+If `DJANGO_CSRF_TRUSTED_ORIGINS` is missing an address, staff signing in from it see: *"Staff sign-in isn't allowed from this website address (…) yet."* Add the address and restart the backend.
+
 ### Visitors' real IP addresses (`DJANGO_PROXY_COUNT`)
 
 The audit log and the rate limits need each visitor's real address. Web servers like Caddy add it to the `X-Forwarded-For` header; `DJANGO_PROXY_COUNT` tells Django how many such servers sit in front of it, so it reads the right entry and ignores anything a visitor made up.
@@ -191,6 +205,6 @@ Staff (session cookie + CSRF token; permissions as in the roles table):
 ## Tests and checks
 
 ```bash
-cd backend && python manage.py test              # 49 tests: API, every role, accounts, audit log
+cd backend && python manage.py test              # 50 tests: API, every role, accounts, audit log
 cd frontend && npm run lint && npx tsc --noEmit  # code checks
 ```
