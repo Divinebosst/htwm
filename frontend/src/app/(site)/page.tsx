@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import apostles from "@/assets/apostles.jpg";
+import logo from "@/assets/logo.png";
 import { EventRow, FeaturedEvent, NoEvents } from "@/components/Events";
 import PrayerForm from "@/components/PrayerForm";
 import Rays from "@/components/Rays";
@@ -17,7 +18,7 @@ import {
   YoutubeIcon,
 } from "@/components/icons";
 import { getServiceTimes, getSettings, getUpcomingEvents } from "@/lib/api";
-import { serviceTime, telHref } from "@/lib/format";
+import { dateTile, serviceTime, telHref } from "@/lib/format";
 
 export default function HomePage() {
   return (
@@ -58,22 +59,52 @@ function Hero() {
             <Link className="btn btn-ghost" href="/events">Upcoming events</Link>
           </div>
         </div>
-        <figure className="hero-photo">
-          <div className="arch">
-            <Image
-              src={apostles}
-              alt="Apostle Chrispen Mahovo preaching, with Prophetess Yvonne Mahovo"
-              priority
-              sizes="(max-width: 860px) 360px, 420px"
-            />
-          </div>
-          <figcaption className="hero-caption">
-            <strong>Apostle Chrispen &amp; Prophetess Yvonne Mahovo</strong>
-            <span>Heal The World Ministries International</span>
-          </figcaption>
-        </figure>
+        <VisitCard />
       </div>
     </section>
+  );
+}
+
+/* First thing visitors see: when they can come, and what's coming up. */
+async function VisitCard() {
+  const [services, events, settings] = await Promise.all([getServiceTimes(), getUpcomingEvents(6), getSettings()]);
+  const next = events.find((e) => e.is_featured) ?? events[0];
+  const when = next ? dateTile(next.starts_at, settings.time_zone) : null;
+  const phone = settings.phones[0];
+  return (
+    <aside className="visit-card" aria-labelledby="visit-title">
+      <div className="visit-card-body">
+        <span className="visit-badge"><Image src={logo} alt="" width={72} priority /></span>
+        <h2 id="visit-title" className="eyebrow">Join us this week</h2>
+        {services.length > 0 ? (
+          <ul className="visit-times">
+            {services.slice(0, 4).map((s) => {
+              const t = serviceTime(s.start_time);
+              return (
+                <li key={s.id}>
+                  <span className="day">{s.day_name}</span>
+                  <span className="time">{t.time}<small>{t.meridiem}</small></span>
+                  <span className="what">{s.title}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="visit-empty">
+            Service times are coming soon.{phone && <> Call <a href={telHref(phone)}>{phone}</a> to find out more.</>}
+          </p>
+        )}
+      </div>
+      {next && (
+        <Link className="visit-next" href={`/events/${next.slug}`}>
+          <span className="label">
+            {next.is_featured ? "Don't miss" : "Next event"} · {when?.weekday} {when?.day} {when?.month}
+          </span>
+          <strong>{next.title}</strong>
+          <ArrowIcon />
+        </Link>
+      )}
+    </aside>
   );
 }
 
@@ -156,29 +187,44 @@ const PILLARS = [
 function About() {
   return (
     <section className="about section" id="about" aria-labelledby="about-title">
-      <div className="wrap about-grid">
-        <div className="about-copy">
-          <p className="eyebrow">About us</p>
-          <h2 id="about-title">A ministry of healing for families and nations</h2>
-          <p className="lead">
-            Heal The World Ministries International, home of Omega Family Church, is led by Apostle Chrispen Mahovo
-            and Prophetess Yvonne Mahovo.
-          </p>
-          <p>
-            We believe that Jesus Christ is the same yesterday, today and forever, and that the power that healed the
-            sick in the Bible still heals today. Every service is a place to worship, hear the Word and receive prayer
-            for healing and deliverance.
-          </p>
-          <p>
-            Our mission is in our name: to carry the healing message of the Gospel to individuals, families,
-            communities and nations.
-          </p>
-          <dl className="vision">
-            <div><dt>Our vision</dt><dd>Changing lives, reviving nations</dd></div>
-            <div><dt>Our church</dt><dd>Omega Family Church</dd></div>
-          </dl>
+      <div className="wrap">
+        <div className="about-grid">
+          <figure className="leaders-photo">
+            <div className="arch">
+              <Image
+                src={apostles}
+                alt="Apostle Chrispen Mahovo preaching, with Prophetess Yvonne Mahovo"
+                sizes="(max-width: 860px) 360px, 420px"
+              />
+            </div>
+            <figcaption className="hero-caption">
+              <strong>Apostle Chrispen &amp; Prophetess Yvonne Mahovo</strong>
+              <span>Leading Heal The World Ministries International</span>
+            </figcaption>
+          </figure>
+          <div className="about-copy">
+            <p className="eyebrow">About us</p>
+            <h2 id="about-title">A ministry of healing for families and nations</h2>
+            <p className="lead">
+              Heal The World Ministries International, home of Omega Family Church, is led by Apostle Chrispen Mahovo
+              and Prophetess Yvonne Mahovo.
+            </p>
+            <p>
+              We believe that Jesus Christ is the same yesterday, today and forever, and that the power that healed
+              the sick in the Bible still heals today. Every service is a place to worship, hear the Word and receive
+              prayer for healing and deliverance.
+            </p>
+            <p>
+              Our mission is in our name: to carry the healing message of the Gospel to individuals, families,
+              communities and nations.
+            </p>
+            <dl className="vision">
+              <div><dt>Our vision</dt><dd>Changing lives, reviving nations</dd></div>
+              <div><dt>Our church</dt><dd>Omega Family Church</dd></div>
+            </dl>
+          </div>
         </div>
-        <ul className="pillars" aria-label="What we believe God for">
+        <ul className="pillars pillars-row" aria-label="What we believe God for">
           {PILLARS.map(({ Icon, title, verse, ref }) => (
             <li className="pillar" key={title}>
               <span className="mark"><Icon /></span>
