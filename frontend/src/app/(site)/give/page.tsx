@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import GiveForm from "@/components/GiveForm";
-import Rays from "@/components/Rays";
 import { getGivingCategories, getSettings } from "@/lib/api";
 import { telHref } from "@/lib/format";
 
@@ -14,29 +13,21 @@ export const metadata: Metadata = {
 export default function GivePage({ searchParams }: PageProps<"/give">) {
   return (
     <>
-      <section className="page-hero" aria-labelledby="give-heading">
-        <Rays variant="page" />
+      <div className="gv-page">
         <div className="wrap">
-          <p className="eyebrow">Tithes · Offerings · Seeds</p>
-          <h1 id="give-heading">
-            Give to the <span>work of God</span>
-          </h1>
-          <p className="lead">
-            Your giving keeps the doors of Omega Family Church open, supports outreach and carries the message of
-            healing to more families.
-          </p>
-          <blockquote className="scripture">
-            “Every man according as he purposeth in his heart, so let him give; not grudgingly, or of necessity: for
-            God loveth a cheerful giver.”<cite>2 Corinthians 9:7</cite>
-          </blockquote>
+          <header className="gv-top">
+            <h1>Give to the work of God</h1>
+            <p>
+              “Every man according as he purposeth in his heart, so let him give… for God loveth a cheerful giver.”{" "}
+              <cite>2 Corinthians 9:7</cite>
+            </p>
+          </header>
+          {/* The form reads ?type=tithe from the link, which is only known at request time */}
+          <Suspense fallback={<GiveFormLoading />}>
+            <GiveFormWithData searchParams={searchParams} />
+          </Suspense>
         </div>
-      </section>
-
-      {/* The form reads ?type=tithe from the link, which is only known at request time */}
-      <Suspense fallback={<GiveFormLoading />}>
-        <GiveFormWithData searchParams={searchParams} />
-      </Suspense>
-
+      </div>
       <GivingFaq />
     </>
   );
@@ -56,6 +47,7 @@ async function GiveFormWithData({ searchParams }: Pick<PageProps<"/give">, "sear
       giving={settings.giving}
       whatsapp={settings.whatsapp}
       shortName={settings.short_name}
+      churchName={settings.church_name}
       categories={categories}
     />
   );
@@ -63,11 +55,8 @@ async function GiveFormWithData({ searchParams }: Pick<PageProps<"/give">, "sear
 
 function GiveFormLoading() {
   return (
-    <div className="wrap give-layout" aria-busy="true" aria-label="Loading the giving form">
-      <div className="steps">
-        <div className="skeleton" style={{ height: 420 }} />
-        <div className="skeleton" style={{ height: 220 }} />
-      </div>
+    <div className="gv-layout" aria-busy="true" aria-label="Loading the giving form">
+      <div className="skeleton" style={{ height: 640 }} />
       <div className="skeleton" style={{ height: 320 }} />
     </div>
   );

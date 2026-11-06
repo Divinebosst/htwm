@@ -1,17 +1,29 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import logo from "@/assets/logo.png";
 import type { GivingCategory, GivingSettings } from "@/lib/api";
 import { buildReference, whatsappUrl } from "@/lib/format";
 import { BankIcon, CardIcon, ChatIcon, CopyIcon, GlobeIcon, MobileIcon, ShieldIcon } from "./icons";
 
 type Method = "ecocash" | "bank" | "card" | "abroad";
 
-const METHODS: { value: Method; label: string; Icon: typeof BankIcon }[] = [
-  { value: "ecocash", label: "EcoCash", Icon: MobileIcon },
-  { value: "bank", label: "Bank transfer", Icon: BankIcon },
-  { value: "card", label: "Card / PayPal", Icon: CardIcon },
-  { value: "abroad", label: "From abroad", Icon: GlobeIcon },
+const METHODS: { value: Method; label: string; Icon: typeof BankIcon; about: (g: GivingSettings) => string }[] = [
+  { value: "ecocash", label: "EcoCash", Icon: MobileIcon, about: (g) => `Pay from your EcoCash wallet in ${g.currency}.` },
+  { value: "bank", label: "Bank transfer", Icon: BankIcon, about: () => "Send from your bank account or banking app." },
+  {
+    value: "card",
+    label: "Card or PayPal",
+    Icon: CardIcon,
+    about: (g) => (g.online_giving_url ? "Pay on a secure online payment page." : "Coming soon."),
+  },
+  {
+    value: "abroad",
+    label: "From abroad",
+    Icon: GlobeIcon,
+    about: (g) => (g.abroad.services.length ? `${g.abroad.services.join(", ")}.` : "Send through a money transfer service."),
+  },
 ];
 const METHOD_LABEL = Object.fromEntries(METHODS.map((m) => [m.value, m.label])) as Record<Method, string>;
 
@@ -22,18 +34,19 @@ type Props = {
   giving: GivingSettings;
   whatsapp: string;
   shortName: string;
+  churchName: string;
   categories: GivingCategory[];
   initialType: string;
 };
 
-export default function GiveForm({ giving, whatsapp, shortName, categories, initialType }: Props) {
+export default function GiveForm({ giving, whatsapp, shortName, churchName, categories, initialType }: Props) {
   const presets = giving.preset_amounts;
   const money = new Intl.NumberFormat("en-US", { style: "currency", currency: giving.currency || "USD" });
   const symbol = money.formatToParts(0).find((p) => p.type === "currency")?.value ?? "$";
 
   const [typeKey, setTypeKey] = useState(initialType);
-  const [preset, setPreset] = useState<number | null>(presets.includes(50) ? 50 : null);
-  const [custom, setCustom] = useState("");
+  const [amountInput, setAmountInput] = useState(presets.includes(50) ? "50" : "");
+  const [showTithe, setShowTithe] = useState(false);
   const [income, setIncome] = useState("");
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
@@ -49,8 +62,8 @@ export default function GiveForm({ giving, whatsapp, shortName, categories, init
   }, [phase.kind]);
 
   const category = categories.find((c) => c.key === typeKey) ?? categories[0];
-  const customValue = parseFloat(custom);
-  const amount = customValue > 0 ? customValue : (preset ?? 0);
+  const parsed = parseFloat(amountInput);
+  const amount = parsed > 0 ? Math.round(parsed * 100) / 100 : 0;
   const reference = category ? buildReference(category.reference_code, name, anonymous) : "";
   const typeLabel = category?.asks_purpose ? (purpose ? `Gift: ${purpose}` : "Gift") : (category?.label ?? "Gift");
   const amountText = amount > 0 ? money.format(amount) : "";
@@ -58,21 +71,17 @@ export default function GiveForm({ giving, whatsapp, shortName, categories, init
   const tithe = incomeValue > 0 ? Math.round(incomeValue * 10) / 100 : 0;
 
   if (!category) {
-    return (
-      <div className="wrap give-layout">
-        <p className="lead">Online giving is being set up. Please give in person at any service for now.</p>
-      </div>
-    );
+    return <p className="lead">Online giving is being set up. Please give in person at any service for now.</p>;
   }
 
   async function confirm() {
     setError("");
-    if (!(amount > 0)) {
-      setError("Choose or enter an amount in step 2 first.");
+    if (!(amount >= 1)) {
+      setError(`Enter an amount of at least ${money.format(1)}.`);
       return;
     }
     if (method === "card" && !giving.online_giving_url) {
-      setError("Online card giving is not available yet. Please choose EcoCash, bank transfer or From abroad.");
+      setError("Card giving isn't available yet. Please choose EcoCash, bank transfer or From abroad.");
       return;
     }
     setPhase({ kind: "sending" });
@@ -117,244 +126,167 @@ export default function GiveForm({ giving, whatsapp, shortName, categories, init
       : "";
 
   return (
-    <div className="wrap give-layout">
-      <form className="steps" onSubmit={(e) => e.preventDefault()} noValidate>
-        {/* Step 1 */}
-        <fieldset className="step">
-          <legend><span className="step-no">1</span>What are you giving?</legend>
-          <div className="type-grid">
-            {categories.map((c) => (
-              <label className="type-card" key={c.key}>
-                <input
-                  type="radio"
-                  name="type"
-                  value={c.key}
-                  id={`type-${c.key}`}
-                  checked={typeKey === c.key}
-                  onChange={() => setTypeKey(c.key)}
-                />
-                <span className="t-name">{c.label}</span>
-                <span className="t-desc">{c.description}</span>
-              </label>
-            ))}
-          </div>
+    <div className="gv-layout">
+      <form className="gv-card" onSubmit={(e) => e.preventDefault()} noValidate>
+        <div className="gv-intro">
+          <span className="gv-thumb"><Image src={logo} alt="" width={56} /></span>
+          <p>
+            You&apos;re giving to <strong>{churchName}</strong>
+            <span>Omega Family Church</span>
+          </p>
+        </div>
+
+        {/* What */}
+        <section className="gv-section" aria-labelledby="gv-what">
+          <h2 id="gv-what"><label htmlFor="gv-type">What are you giving?</label></h2>
+          <select id="gv-type" value={category.key} onChange={(e) => setTypeKey(e.target.value)}>
+            {categories.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
+          {category.description && <p className="gv-help">{category.description}</p>}
 
           {category.key === "tithe" && (
-            <div className="tithe-calc">
-              <div className="field">
-                <label htmlFor="income">Work out your tithe</label>
-                <div className="money-input">
-                  <span className="cur">{symbol}</span>
-                  <input
-                    id="income"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    placeholder="Your income this period"
-                    value={income}
-                    onChange={(e) => setIncome(e.target.value)}
-                  />
+            showTithe ? (
+              <div className="gv-tithe">
+                <label htmlFor="gv-income">Your income for this period</label>
+                <div className="gv-tithe-row">
+                  <input id="gv-income" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
+                    value={income} onChange={(e) => setIncome(e.target.value)} />
+                  <span aria-live="polite">Tithe (10%): <strong>{money.format(tithe)}</strong></span>
+                  <button type="button" className="gv-link" disabled={!tithe} onClick={() => setAmountInput(tithe.toFixed(2))}>
+                    Use this amount
+                  </button>
                 </div>
               </div>
-              <div className="result" aria-live="polite">
-                <span>Your tithe (10%)</span>
-                <strong>{money.format(tithe)}</strong>
-              </div>
-              <button
-                className="btn btn-ghost"
-                type="button"
-                disabled={!tithe}
-                onClick={() => {
-                  setCustom(tithe.toFixed(2));
-                  setPreset(null);
-                }}
-              >
-                Use this amount
-              </button>
-            </div>
+            ) : (
+              <button type="button" className="gv-link" onClick={() => setShowTithe(true)}>Work out my tithe</button>
+            )
           )}
 
           {category.asks_purpose && (
-            <div className="field" id="other-wrap">
-              <label htmlFor="other-purpose">What is this gift for?</label>
-              <input
-                id="other-purpose"
-                type="text"
-                maxLength={140}
-                placeholder="e.g. Youth conference, a widow's support"
-                value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-              />
+            <div className="field">
+              <label htmlFor="gv-purpose">What is this gift for?</label>
+              <input id="gv-purpose" type="text" maxLength={140} placeholder="e.g. Youth conference"
+                value={purpose} onChange={(e) => setPurpose(e.target.value)} />
             </div>
           )}
-        </fieldset>
+        </section>
 
-        {/* Step 2 */}
-        <fieldset className="step">
-          <legend><span className="step-no">2</span>How much?</legend>
-          <p className="step-note">
-            Choose an amount or type your own. All amounts are in <strong>{giving.currency}</strong>.
-          </p>
-          <div className="amount-grid">
+        {/* How much */}
+        <section className="gv-section" aria-labelledby="gv-amount-title">
+          <h2 id="gv-amount-title">Enter your gift</h2>
+          <div className="gv-presets">
             {presets.map((a) => (
-              <label className="amount-opt" htmlFor={`amt-${a}`} key={a}>
-                <input
-                  type="radio"
-                  name="preset"
-                  id={`amt-${a}`}
-                  value={a}
-                  checked={preset === a && !(customValue > 0)}
-                  onChange={() => {
-                    setPreset(a);
-                    setCustom("");
-                  }}
-                />
-                <span>{symbol}{a}</span>
-              </label>
+              <button key={a} type="button" className="gv-preset" aria-pressed={amount === a}
+                onClick={() => setAmountInput(String(a))}>
+                {symbol}{a}
+              </button>
             ))}
           </div>
-          <div className="custom-amount field">
-            <label htmlFor="custom-amount">Or enter your own amount</label>
-            <div className="money-input">
-              <span className="cur">{symbol}</span>
-              <input
-                id="custom-amount"
-                type="number"
-                inputMode="decimal"
-                min="1"
-                step="0.01"
-                placeholder="0.00"
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-              />
-            </div>
-          </div>
-        </fieldset>
+          <label className="gv-amount" htmlFor="gv-amount">
+            <span className="gv-cur"><strong>{symbol}</strong><small>{giving.currency}</small></span>
+            <span className="sr-only">Amount in {giving.currency}</span>
+            <input id="gv-amount" type="text" inputMode="decimal" autoComplete="off" placeholder="0"
+              value={amountInput}
+              onChange={(e) => setAmountInput(e.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"))} />
+            {amountInput && !amountInput.includes(".") && <span className="gv-cents" aria-hidden>.00</span>}
+          </label>
+          <p className="gv-help">Minimum {money.format(1)}. All gifts are in {giving.currency}.</p>
+        </section>
 
-        {/* Step 3 */}
-        <fieldset className="step">
-          <legend><span className="step-no">3</span>Your details</legend>
-          <p className="step-note">So we can record your gift and thank you. Your details stay with the church office.</p>
-          <div className="form-grid">
-            <div className="field">
-              <label htmlFor="giver-name">Full name</label>
-              <input
-                id="giver-name"
-                type="text"
-                autoComplete="name"
-                placeholder="e.g. Tendai Moyo"
-                value={name}
-                disabled={anonymous}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="giver-contact">Phone or email <span className="hint">(optional)</span></label>
-              <input
-                id="giver-contact"
-                type="text"
-                autoComplete="tel"
-                placeholder="For your receipt"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-              />
-            </div>
-            <label className="check field full" htmlFor="anonymous">
-              <input id="anonymous" type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
-              <span>Give anonymously. Your name will not appear on the payment reference.</span>
-            </label>
-          </div>
-        </fieldset>
-
-        {/* Step 4 */}
-        <fieldset className="step">
-          <legend><span className="step-no">4</span>How would you like to give?</legend>
-          <div className="method-tabs" role="radiogroup" aria-label="Payment method">
-            {METHODS.map(({ value, label, Icon }) => (
-              <label className="method-tab" key={value}>
-                <input type="radio" name="method" value={value} checked={method === value} onChange={() => setMethod(value)} />
-                <span><Icon />{label}</span>
-              </label>
+        {/* How */}
+        <section className="gv-section" aria-labelledby="gv-method-title">
+          <h2 id="gv-method-title">Payment method</h2>
+          <div className="gv-methods" role="radiogroup" aria-labelledby="gv-method-title">
+            {METHODS.map(({ value, label, Icon, about }) => (
+              <div key={value} className={`gv-method${method === value ? " is-on" : ""}`}>
+                <label>
+                  <input type="radio" name="method" value={value} checked={method === value} onChange={() => setMethod(value)} />
+                  <Icon className="gv-method-icon" />
+                  <span className="gv-method-name">{label}</span>
+                  <span className="gv-method-about">{about(giving)}</span>
+                </label>
+                {method === value && (
+                  <div className="gv-method-body">
+                    <MethodPanel method={value} giving={giving} amountText={amountText} reference={reference} />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-          <div className="method-panel" aria-live="polite">
-            <MethodPanel method={method} giving={giving} amountText={amountText} reference={reference} />
+        </section>
+
+        {/* Who */}
+        <section className="gv-section" aria-labelledby="gv-who">
+          <h2 id="gv-who">Your details</h2>
+          <div className="field">
+            <label htmlFor="gv-name">Your name</label>
+            <input id="gv-name" type="text" autoComplete="name" placeholder="e.g. Tendai Moyo" value={name}
+              disabled={anonymous} onChange={(e) => setName(e.target.value)} />
           </div>
-        </fieldset>
+          <div className="field">
+            <label htmlFor="gv-contact">Phone or email for your receipt <span className="hint">(optional)</span></label>
+            <input id="gv-contact" type="text" autoComplete="tel" value={contact} onChange={(e) => setContact(e.target.value)} />
+          </div>
+          <label className="check" htmlFor="gv-anon">
+            <input id="gv-anon" type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
+            <span>Give anonymously. Your name won&apos;t appear on the payment reference.</span>
+          </label>
+        </section>
       </form>
 
-      {/* Summary */}
-      <aside className="summary" aria-label="Your gift">
-        <div className="summary-card">
-          <div className="summary-top">
-            <p className="eyebrow">Your gift</p>
-            <p className={`sum-amount${amount > 0 ? "" : " empty"}`}>{amount > 0 ? amountText : "Choose an amount"}</p>
-            <p className="sum-type">{typeLabel}</p>
-          </div>
-
+      {/* Sidebar */}
+      <aside className="gv-side" aria-label="Your gift">
+        <div className="gv-summary">
           {phase.kind !== "done" ? (
-            <div className="summary-body">
-              <dl className="sum-list">
+            <>
+              <h2>Your gift</h2>
+              <dl>
+                <div><dt>Giving</dt><dd>{typeLabel}</dd></div>
                 <div><dt>Paying by</dt><dd>{METHOD_LABEL[method]}</dd></div>
-                <div className="ref-row">
-                  <dt>Reference</dt>
-                  <dd><span className="ref-code">{reference}</span><CopyButton text={reference} /></dd>
-                </div>
+                <div><dt>Reference</dt><dd><span className="mono">{reference}</span><CopyButton text={reference} /></dd></div>
+                <div className="gv-total"><dt>Total</dt><dd>{amount > 0 ? amountText : "—"}</dd></div>
               </dl>
               {error && <p className="sum-error" role="alert">{error}</p>}
               {method === "card" && giving.online_giving_url && (
-                <a className="btn btn-primary" href={giving.online_giving_url} target="_blank" rel="noopener">
+                <a className="gv-submit gv-submit-alt" href={giving.online_giving_url} target="_blank" rel="noopener">
                   Continue to secure payment
                 </a>
               )}
-              <button className="btn btn-gold" type="button" onClick={confirm} disabled={phase.kind === "sending"}>
+              <button className="gv-submit" type="button" onClick={confirm} disabled={phase.kind === "sending"}>
                 {phase.kind === "sending" ? "Recording…" : "I've sent my gift"}
               </button>
-              <p className="safe-note">
-                <ShieldIcon />
-                <span>Only use the account details on this page. The church will never ask you to send money to a personal number.</span>
-              </p>
-            </div>
+              <p className="gv-fine">Pay using the details on the left, then tap the button so we can record your gift.</p>
+            </>
           ) : (
-            <div className="summary-body thanks">
-              <h3 ref={thanksRef} tabIndex={-1}>{firstName ? `Thank you, ${firstName}!` : "Thank you!"}</h3>
+            <div className="gv-thanks">
+              <h2 ref={thanksRef} tabIndex={-1}>{firstName ? `Thank you, ${firstName}!` : "Thank you!"}</h2>
               <p>
-                Your {typeLabel.toLowerCase()} of {amountText} by {METHOD_LABEL[method]} is on its way.{" "}
+                Your {typeLabel.toLowerCase()} of <strong>{amountText}</strong> by {METHOD_LABEL[method]} is on its way.{" "}
                 {phase.gift
-                  ? `We have recorded it as gift number ${phase.gift.id}. Send your proof of payment so the church office can confirm it.`
+                  ? `We've recorded it as gift number ${phase.gift.id}. Send your proof of payment so the church office can confirm it.`
                   : "We couldn't save a record of it just now, but your payment is fine. Send your proof of payment and the church office will record it."}
               </p>
-              <a className="btn btn-primary" href={whatsappUrl(whatsapp, proofMessage)} target="_blank" rel="noopener">
-                <ChatIcon />
-                Send proof on WhatsApp
+              <a className="gv-submit" href={whatsappUrl(whatsapp, proofMessage)} target="_blank" rel="noopener">
+                <ChatIcon /> Send proof on WhatsApp
               </a>
-              <button className="btn btn-ghost" type="button" onClick={() => setPhase({ kind: "form" })}>
-                Give again
-              </button>
-              <blockquote className="scripture">
-                “Give, and it shall be given unto you; good measure, pressed down, and shaken together, and running
-                over.”<cite>Luke 6:38</cite>
-              </blockquote>
+              <button type="button" className="gv-link" onClick={() => setPhase({ kind: "form" })}>Give again</button>
+              <p className="gv-verse">“God loveth a cheerful giver.” <cite>2 Corinthians 9:7</cite></p>
             </div>
           )}
         </div>
-        <div className="summary-verse">
-          <blockquote className="scripture">
-            “Honour the LORD with thy substance, and with the firstfruits of all thine increase.”<cite>Proverbs 3:9</cite>
-          </blockquote>
+        <div className="gv-safe">
+          <ShieldIcon />
+          <p>
+            <strong>Give safely</strong>
+            Only use the account details on this page. The church will never ask you to send money to a personal number.
+          </p>
         </div>
       </aside>
     </div>
   );
 }
 
-function MethodPanel({
-  method,
-  giving,
-  amountText,
-  reference,
-}: {
+function MethodPanel({ method, giving, amountText, reference }: {
   method: Method;
   giving: GivingSettings;
   amountText: string;
@@ -365,7 +297,6 @@ function MethodPanel({
   if (method === "ecocash") {
     return (
       <>
-        <h3>Pay with EcoCash</h3>
         <dl className="details">
           <Row label="Merchant name" value={ecocash.merchant_name} />
           <Row label="Merchant code" value={ecocash.merchant_code} copy />
@@ -373,11 +304,8 @@ function MethodPanel({
           <Row label="Reference" value={reference} copy />
         </dl>
         {ecocash.steps.length > 0 && (
-          <ol className="how">
-            {ecocash.steps.map((s) => <li key={s}>{s}</li>)}
-          </ol>
+          <ol className="how">{ecocash.steps.map((s) => <li key={s}>{s}</li>)}</ol>
         )}
-        <p className="panel-note">When you have paid, tap “I&apos;ve sent my gift” and send us the confirmation SMS.</p>
       </>
     );
   }
@@ -385,7 +313,6 @@ function MethodPanel({
   if (method === "bank") {
     return (
       <>
-        <h3>Bank transfer</h3>
         <dl className="details">
           <Row label="Account name" value={bank.account_name} copy />
           <Row label="Bank" value={bank.bank_name} />
@@ -397,8 +324,8 @@ function MethodPanel({
           <Row label="Reference" value={reference} copy />
         </dl>
         <p className="panel-note">
-          Type the reference in the “reference” or “narration” field of your transfer so we can match your gift. The
-          SWIFT code is only needed when sending from another country.
+          Put the reference in the “reference” or “narration” field so we can match your gift. The SWIFT code is only
+          needed from another country.
         </p>
       </>
     );
@@ -406,31 +333,17 @@ function MethodPanel({
 
   if (method === "card") {
     return giving.online_giving_url ? (
-      <>
-        <h3>Card or PayPal</h3>
-        <p>
-          You will go to our secure payment page to finish your gift{amountText && <> of <strong>{amountText}</strong></>}.
-          Add <strong>{reference}</strong> in the notes so we can record it.
-        </p>
-        <p className="panel-note">Card details are handled by the payment provider. The church never sees or stores them.</p>
-      </>
+      <p className="panel-note">
+        Use <strong>Continue to secure payment</strong> on the right, and add <strong>{reference}</strong> in the notes.
+        Card details are handled by the payment provider; the church never sees them.
+      </p>
     ) : (
-      <>
-        <h3>Card or PayPal</h3>
-        <p><span className="todo">Coming soon</span></p>
-        <p>Online card giving is not set up yet. Please give by EcoCash, bank transfer or in person at any service.</p>
-      </>
+      <p className="panel-note">Online card giving isn&apos;t set up yet. Please give by EcoCash, bank transfer or in person.</p>
     );
   }
 
-  const services = abroad.services.length
-    ? abroad.services.length > 1
-      ? `${abroad.services.slice(0, -1).join(", ")} or ${abroad.services[abroad.services.length - 1]}`
-      : abroad.services[0]
-    : "a money transfer service";
   return (
     <>
-      <h3>Send from abroad</h3>
       <dl className="details">
         <Row label="Send to" value={abroad.recipient_name} copy />
         <Row label="Phone" value={abroad.recipient_phone} copy />
@@ -438,12 +351,7 @@ function MethodPanel({
         <Row label="Amount" value={amountText} copy />
         <Row label="Reference" value={reference} copy />
       </dl>
-      <p>Use {services}.</p>
-      <ol className="how">
-        <li>Send the money to the name and phone number above.</li>
-        <li>Keep the transaction code (PIN or MTCN).</li>
-        <li>Tap “I&apos;ve sent my gift” and send us the code on WhatsApp so the church office can collect it.</li>
-      </ol>
+      <p className="panel-note">Keep the transaction code (PIN or MTCN) and send it to us on WhatsApp after you tap “I&apos;ve sent my gift”.</p>
     </>
   );
 }
@@ -468,7 +376,6 @@ function CopyButton({ text }: { text: string }) {
       await navigator.clipboard.writeText(text);
       ok = true;
     } catch {
-      // Older browsers: copy through a temporary text box
       const box = document.createElement("textarea");
       box.value = text;
       box.setAttribute("readonly", "");
