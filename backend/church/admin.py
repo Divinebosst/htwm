@@ -40,7 +40,6 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = ["category", "is_published", "is_featured"]
     list_editable = ["is_featured", "is_published"]
     search_fields = ["title", "summary", "location"]
-    date_hierarchy = "starts_at"
     prepopulated_fields = {"slug": ["title"]}
     fieldsets = [
         (None, {"fields": ["title", "slug", "category", "summary", "description"]}),
@@ -68,7 +67,6 @@ class GiftAdmin(admin.ModelAdmin):
     list_display = ["created_at", "reference", "giver", "category", "amount_display", "method", "status"]
     list_filter = ["status", "method", "category", "created_at"]
     search_fields = ["reference", "giver_name", "giver_contact", "purpose"]
-    date_hierarchy = "created_at"
     readonly_fields = ["category", "purpose", "amount", "currency", "method", "reference", "giver_name",
                        "giver_contact", "anonymous", "created_at", "confirmed_at"]
     fields = ["category", "purpose", "amount", "currency", "method", "reference", "giver_name", "giver_contact",

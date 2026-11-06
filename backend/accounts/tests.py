@@ -88,6 +88,17 @@ class SignInTests(StaffTestCase):
         boss = User.objects.create_superuser("boss", "boss@example.com", PASSWORD)
         self.assertEqual(boss.staff_profile.role, SYSTEM_ADMIN)
 
+    def test_django_admin_lists_open_for_system_admin(self):
+        """Every built-in admin list loads (MySQL without time zone tables included)."""
+        Event.objects.create(title="Crusade", starts_at=timezone.now() + timedelta(days=3), summary="x")
+        Gift.objects.create(category=GivingCategory.objects.get(key="tithe"), amount=10, currency="USD",
+                            method="bank", reference="TITHE-X")
+        c = self.client_for(self.sysadmin)
+        for path in ["church/event", "church/gift", "church/prayerrequest", "church/servicetime",
+                     "church/givingcategory", "audit/auditlog", "auth/user"]:
+            self.assertEqual(c.get(f"/django-admin/{path}/").status_code, 200, path)
+        self.assertEqual(self.client_for(self.admin).get("/django-admin/").status_code, 302)  # not for Admins
+
     def test_role_controls_django_admin_access(self):
         self.assertTrue(User.objects.get(pk=self.sysadmin.pk).is_superuser)
         self.assertFalse(User.objects.get(pk=self.admin.pk).is_staff)

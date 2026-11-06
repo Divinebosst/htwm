@@ -119,6 +119,12 @@ class AuditTrailTests(TestCase):
         found = self.c.get("/api/admin/audit?q=try 7").json()
         self.assertGreaterEqual(found["count"], 1)
 
+    def test_filter_lists_have_no_repeats(self):
+        for _ in range(3):
+            AuditLog.objects.create(actor_label="x", action="login", object_type="staff account")
+        types = self.c.get("/api/admin/audit").json()["filters"]["object_types"]
+        self.assertEqual(len(types), len(set(types)))
+
     def test_pastor_cannot_read_audit_log(self):
         make_staff("pastor", PASTOR)
         c = APIClient()

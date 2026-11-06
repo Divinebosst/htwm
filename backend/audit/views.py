@@ -76,7 +76,8 @@ class AuditLogList(APIView):
         everything = AuditLog.objects.all()
         filters = {
             "actions": [{"value": v, "label": l} for v, l in AuditLog.ACTIONS],
-            "object_types": sorted(t for t in everything.values_list("object_type", flat=True).distinct() if t),
+            # order_by() clears the default sort so distinct() really returns each type once
+            "object_types": sorted(t for t in everything.order_by().values_list("object_type", flat=True).distinct() if t),
             "actors": [
                 {"value": str(a["actor"]), "label": a["actor_label"]}
                 for a in everything.filter(actor__isnull=False).values("actor", "actor_label").distinct()

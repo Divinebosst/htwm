@@ -91,10 +91,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# MySQL 8.0+ (MariaDB 10.6+ also works). Create the database with the utf8mb4
+# character set so names and messages in any language are stored correctly.
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get("DJANGO_SQLITE_PATH", str(BASE_DIR / "db.sqlite3")),
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.environ.get("MYSQL_DATABASE") or "htwm",
+        "USER": os.environ.get("MYSQL_USER") or "htwm",
+        "PASSWORD": os.environ.get("MYSQL_PASSWORD", ""),
+        "HOST": os.environ.get("MYSQL_HOST") or "127.0.0.1",
+        "PORT": os.environ.get("MYSQL_PORT") or "3306",
+        "CONN_MAX_AGE": int(os.environ.get("MYSQL_CONN_MAX_AGE") or "60"),
+        "CONN_HEALTH_CHECKS": True,
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            # MySQL 8's strict defaults, set explicitly so every host behaves the same
+            "init_command": (
+                "SET sql_mode='STRICT_TRANS_TABLES,ONLY_FULL_GROUP_BY,NO_ZERO_IN_DATE,"
+                "NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
+            ),
+        },
+        "TEST": {"CHARSET": "utf8mb4", "COLLATION": "utf8mb4_0900_ai_ci"},
     }
 }
 
@@ -122,6 +139,8 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+if "test" in sys.argv:  # tests don't run collectstatic first
+    STORAGES["staticfiles"] = {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
