@@ -193,7 +193,7 @@ If `DJANGO_CSRF_TRUSTED_ORIGINS` is missing an address, staff signing in from it
 
 ### Link previews (WhatsApp, Facebook, X, LinkedIn, Telegram…)
 
-Every page has Open Graph and X (Twitter) tags, so a shared link shows the church's name, a short description and a picture. The picture is the share card in `frontend/src/assets/share-card.jpg` (1200×630, the logo on royal blue); an event with its own photo uses that photo instead. Replace the file to change the card.
+Every page has Open Graph and X (Twitter) tags, so a shared link shows the church's name, a short description and a picture. The picture is the share card in `frontend/src/assets/share-card.jpg` (1200×630, the logo and name centred on royal blue, so WhatsApp on a computer, which shows only the middle square, still shows the whole logo); an event with its own photo uses that photo instead. Replace the file to change the card.
 
 Apps remember a preview for a while. After changing the card, refresh it with the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) ("Scrape Again", which also updates WhatsApp and Instagram) and LinkedIn's [Post Inspector](https://www.linkedin.com/post-inspector/). To test a fresh preview straight away, share the link with something extra on the end, e.g. `https://htwm.vercel.app/?v=2`.
 
