@@ -299,7 +299,7 @@ async function Watch() {
           {social.youtube && (
             <a className="watch-link" href={social.youtube} target="_blank" rel="noopener">
               <span className="logo yt"><YoutubeIcon style={{ color: "#fff" }} /></span>
-              <span><strong>YouTube</strong><span>Apostle Chrispen Mahovo</span></span>
+              <span><strong>YouTube</strong><span>Heal The World Ministries</span></span>
               <ArrowIcon />
             </a>
           )}
