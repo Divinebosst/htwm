@@ -184,12 +184,18 @@ If the website runs on Vercel (e.g. `https://htwm.vercel.app`) and Django runs e
 | Where | Variable | Value |
 |---|---|---|
 | Vercel | `DJANGO_API_URL` | the backend's public address, e.g. `https://htwm-api.onrender.com` |
-| Vercel | `SITE_URL` | `https://htwm.vercel.app` (or your custom domain) |
+| Vercel | `SITE_URL` | your custom domain once you have one, e.g. `https://www.healtheworldministries.com`. Link previews use it; without it they use the Vercel address |
 | Backend | `DJANGO_ALLOWED_HOSTS` | the backend's own host, e.g. `htwm-api.onrender.com` |
 | Backend | `DJANGO_CSRF_TRUSTED_ORIGINS` | **every address the website is opened on**, comma separated, e.g. `https://htwm.vercel.app,https://www.healtheworldministries.com` |
 | Backend | `DJANGO_PROXY_COUNT` | usually `2` |
 
 If `DJANGO_CSRF_TRUSTED_ORIGINS` is missing an address, staff signing in from it see: *"Staff sign-in isn't allowed from this website address (…) yet."* Add the address and restart the backend.
+
+### Link previews (WhatsApp, Facebook, X, LinkedIn, Telegram…)
+
+Every page has Open Graph and X (Twitter) tags, so a shared link shows the church's name, a short description and a picture. The picture is the share card in `frontend/src/assets/share-card.jpg` (1200×630, the logo on royal blue); an event with its own photo uses that photo instead. Replace the file to change the card.
+
+Apps remember a preview for a while. After changing the card, refresh it with the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) ("Scrape Again", which also updates WhatsApp and Instagram) and LinkedIn's [Post Inspector](https://www.linkedin.com/post-inspector/). To test a fresh preview straight away, share the link with something extra on the end, e.g. `https://htwm.vercel.app/?v=2`.
 
 ### Visitors' real IP addresses (`DJANGO_PROXY_COUNT`)
 

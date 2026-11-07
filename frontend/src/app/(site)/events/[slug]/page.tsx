@@ -7,6 +7,7 @@ import Rays from "@/components/Rays";
 import { ArrowIcon, CalendarIcon, ShareIcon } from "@/components/icons";
 import { getEvent, getSettings, getUpcomingEvents } from "@/lib/api";
 import { googleCalendarUrl, longDate, telHref } from "@/lib/format";
+import { mediaPath, pageMetadata, siteUrl } from "@/lib/site";
 
 // Prerender the upcoming events at build time. Events added later are
 // rendered on their first visit and then cached.
@@ -19,11 +20,12 @@ export async function generateMetadata({ params }: PageProps<"/events/[slug]">):
   const { slug } = await params;
   const event = await getEvent(slug);
   if (!event) return { title: "Event not found" };
-  return {
+  return pageMetadata({
     title: event.title,
     description: event.summary,
-    openGraph: { title: event.title, description: event.summary, images: event.image_url ? [event.image_url] : undefined },
-  };
+    path: `/events/${event.slug}`,
+    image: mediaPath(event.image_url),
+  });
 }
 
 export default function EventPage({ params }: PageProps<"/events/[slug]">) {
@@ -42,8 +44,7 @@ async function EventDetail({ params }: Pick<PageProps<"/events/[slug]">, "params
   const tz = settings.time_zone;
   const phone = settings.phones[0];
   const paragraphs = event.description.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-  const siteUrl = (process.env.SITE_URL || "").replace(/\/$/, "");
-  const shareText = `${event.title}\n${longDate(event.starts_at, tz)}${event.location ? ` · ${event.location}` : ""}\n\n${event.summary}${siteUrl ? `\n\n${siteUrl}/events/${event.slug}` : ""}`;
+  const shareText = `${event.title}\n${longDate(event.starts_at, tz)}${event.location ? ` · ${event.location}` : ""}\n\n${event.summary}\n\n${siteUrl()}/events/${event.slug}`;
 
   return (
     <>
@@ -77,7 +78,7 @@ async function EventDetail({ params }: Pick<PageProps<"/events/[slug]">, "params
           {event.image_url && (
             // Uploaded through the Django admin, so its size isn't known ahead of time
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={event.image_url} alt="" />
+            <img src={mediaPath(event.image_url) ?? ""} alt="" />
           )}
           <p className="lead">{event.summary}</p>
           {paragraphs.map((p, i) => (

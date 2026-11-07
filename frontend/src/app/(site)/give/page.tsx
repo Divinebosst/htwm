@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import GiveForm from "@/components/GiveForm";
 import { getGivingCategories, getSettings } from "@/lib/api";
+import { pageMetadata } from "@/lib/site";
 import { telHref } from "@/lib/format";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Give",
   description:
     "Give your tithes, offerings, seeds and building fund to Heal The World Ministries International with PayPal, a card, EcoCash, InnBucks, O'mari or OneMoney.",
-};
+  path: "/give",
+});
 
 export default function GivePage({ searchParams }: PageProps<"/give">) {
   return (

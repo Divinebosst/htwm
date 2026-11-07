@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { EventCard, EventRow, NoEvents } from "@/components/Events";
 import Rays from "@/components/Rays";
 import { getPastEvents, getSettings, getUpcomingEvents } from "@/lib/api";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Events",
   description:
     "Crusades, conferences, prayer meetings and special services at Heal The World Ministries International, Omega Family Church.",
-};
+  path: "/events",
+});
 
 export default async function EventsPage() {
   const [upcoming, past, settings] = await Promise.all([getUpcomingEvents(), getPastEvents(6), getSettings()]);

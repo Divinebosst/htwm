@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Lora, Source_Sans_3 } from "next/font/google";
+import { SHARE_IMAGE, SITE_NAME, SITE_TAGLINE, siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const display = Barlow_Condensed({
@@ -23,17 +24,29 @@ const scripture = Lora({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(siteUrl()),
+  applicationName: SITE_NAME,
   title: {
     default: "Heal The World Ministries International | Omega Family Church",
     template: "%s | Heal The World Ministries International",
   },
   description:
     "Heal The World Ministries International, Omega Family Church, led by Apostle Chrispen and Prophetess Yvonne Mahovo. Healings, miracles and deliverances. Changing lives, reviving nations.",
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "Heal The World Ministries International",
-    description: "Omega Family Church. Healings, miracles and deliverances. Changing lives, reviving nations.",
-    images: ["/images/flier.webp"],
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_GB",
+    url: "/",
+    title: SITE_NAME,
+    description: SITE_TAGLINE,
+    images: [SHARE_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_TAGLINE,
+    images: [SHARE_IMAGE],
   },
 };
 
