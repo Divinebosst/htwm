@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import datetime, time
 from decimal import Decimal
 
+from django.conf import settings as django_settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Count, Q, Sum
@@ -23,7 +24,9 @@ from accounts.permissions import StaffPermission, StaffSessionAuthentication
 from accounts.roles import has_perm
 from config.api import paginate
 
+from . import paynow, paypal
 from .models import Event, Gift, GivingCategory, PrayerRequest, ServiceTime, SiteSettings
+from .payment_api import close_unfinished_payments
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -68,6 +71,7 @@ class DashboardView(StaffAPIView):
             }
 
         if has_perm(user, "gifts.view"):
+            close_unfinished_payments()
             month_start = timezone.make_aware(datetime.combine(timezone.localdate().replace(day=1), time.min))
             pending = Gift.objects.filter(status="pending")
             received = Gift.objects.filter(status="received", confirmed_at__gte=month_start)
@@ -357,7 +361,7 @@ class PrayerAdminDetail(StaffAPIView):
 class GiftAdminSerializer(serializers.ModelSerializer):
     category = serializers.CharField(source="category.key", read_only=True)
     category_label = serializers.CharField(source="category.label", read_only=True)
-    method_label = serializers.CharField(source="get_method_display", read_only=True)
+    method_label = serializers.CharField(source="payment_label", read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
@@ -371,6 +375,10 @@ class GiftAdminSerializer(serializers.ModelSerializer):
             "currency",
             "method",
             "method_label",
+            "provider",
+            "payer_phone",
+            "provider_reference",
+            "provider_status",
             "reference",
             "giver_name",
             "giver_contact",
@@ -419,6 +427,7 @@ class GiftAdminList(StaffAPIView):
     permission_classes = [StaffPermission("gifts.view", "gifts.edit")]
 
     def get(self, request):
+        close_unfinished_payments()
         qs = _filtered_gifts(request)
         totals = defaultdict(dict)
         for row in qs.values("status", "currency").annotate(total=Sum("amount"), n=Count("id")):
@@ -524,23 +533,12 @@ CONTACT_FIELDS = [
     "youtube_url",
     "website_url",
 ]
+# Givers pay through PayPal and Paynow, which are connected on the server
+# (see README). The old EcoCash, bank and "from abroad" details are kept in
+# the database but no longer shown or edited.
 PAYMENT_FIELDS = [
     "currency",
     "preset_amounts",
-    "ecocash_merchant_name",
-    "ecocash_merchant_code",
-    "ecocash_steps",
-    "bank_account_name",
-    "bank_name",
-    "bank_branch",
-    "bank_account_number",
-    "bank_account_currency",
-    "bank_swift",
-    "online_giving_url",
-    "abroad_recipient_name",
-    "abroad_recipient_phone",
-    "abroad_country",
-    "abroad_services",
 ]
 
 
@@ -562,6 +560,11 @@ class SettingsAdminView(StaffAPIView):
             "payment_fields": PAYMENT_FIELDS,
             "can_edit_contact": has_perm(request.user, "settings.edit_contact"),
             "can_edit_payment": has_perm(request.user, "settings.edit_payment"),
+            "online_payments": {
+                "paypal": paypal.is_configured(),
+                "paypal_mode": django_settings.PAYPAL_MODE,
+                "mobile_money": paynow.is_configured(),
+            },
         }
 
     def get(self, request):

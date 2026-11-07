@@ -36,6 +36,11 @@ export type GivingSettings = {
   };
   online_giving_url: string;
   abroad: { recipient_name: string; recipient_phone: string; country: string; services: string[] };
+  /** Empty until PayPal is connected on the server. */
+  paypal_client_id: string;
+  paypal_mode: "sandbox" | "live";
+  /** True once Paynow (EcoCash, InnBucks, O'mari, OneMoney) is connected on the server. */
+  mobile_money_enabled: boolean;
 };
 
 export type ServiceTime = {
@@ -90,6 +95,9 @@ export const FALLBACK_SETTINGS: Settings = {
     bank: { account_name: "", bank_name: "", branch: "", account_number: "", account_currency: "", swift: "" },
     online_giving_url: "",
     abroad: { recipient_name: "", recipient_phone: "", country: "", services: [] },
+    paypal_client_id: "",
+    paypal_mode: "sandbox",
+    mobile_money_enabled: false,
   },
 };
 

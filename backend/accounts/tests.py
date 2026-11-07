@@ -158,8 +158,8 @@ class PermissionMatrixTests(StaffTestCase):
                    {"phone_primary": "0775 856 800"})
         # Payment details: only a System Admin may change them (try the others first)
         self.check("patch", "/api/admin/settings", {ADMIN: 403, PASTOR: 403, CARETAKER: 403},
-                   {"bank_account_number": "123456"})
-        self.check("patch", "/api/admin/settings", {SYSTEM_ADMIN: 200}, {"bank_account_number": "123456"})
+                   {"currency": "ZAR"})
+        self.check("patch", "/api/admin/settings", {SYSTEM_ADMIN: 200}, {"currency": "ZAR"})
         self.check("get", "/api/admin/users", {SYSTEM_ADMIN: 200, ADMIN: 200, PASTOR: 403, CARETAKER: 403})
         self.check("get", "/api/admin/audit", {SYSTEM_ADMIN: 200, ADMIN: 200, PASTOR: 403, CARETAKER: 403})
 

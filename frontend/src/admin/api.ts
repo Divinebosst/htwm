@@ -186,6 +186,12 @@ export type AdminGift = {
   currency: string;
   method: string;
   method_label: string;
+  /** Mobile money wallet: ecocash, innbucks, omari or onemoney. */
+  provider: string;
+  payer_phone: string;
+  /** PayPal capture ID or Paynow reference, once paid. */
+  provider_reference: string;
+  provider_status: string;
   reference: string;
   giver_name: string;
   giver_contact: string;

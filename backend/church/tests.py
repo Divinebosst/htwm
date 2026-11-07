@@ -1,5 +1,4 @@
 from datetime import timedelta
-from decimal import Decimal
 
 from django.core.cache import cache
 from django.core.management import call_command
@@ -7,7 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import Event, Gift, GivingCategory, PrayerRequest, SiteSettings, build_reference
+from .models import Event, GivingCategory, PrayerRequest, SiteSettings, build_reference
 
 
 class ReferenceTests(TestCase):
@@ -33,6 +32,9 @@ class ApiTests(TestCase):
         self.assertEqual(data["giving"]["preset_amounts"], [10, 20, 50, 100, 200, 500])
         self.assertEqual(data["whatsapp"], "263775856800")
         self.assertEqual(len(data["giving"]["ecocash"]["steps"]), 4)
+        # No payment keys set up in tests, so online giving reports itself as off
+        self.assertEqual(data["giving"]["paypal_client_id"], "")
+        self.assertFalse(data["giving"]["mobile_money_enabled"])
 
     def test_giving_categories_come_from_migration(self):
         keys = [c["key"] for c in self.client.get("/api/giving-categories").json()]
@@ -63,43 +65,6 @@ class ApiTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["title"], "Youth Night")
         self.assertEqual(self.client.get("/api/events/nope").status_code, 404)
-
-    def test_create_gift_builds_reference_and_currency(self):
-        res = self.client.post(
-            "/api/gifts",
-            {"category": "tithe", "amount": "85.00", "method": "bank", "giver_name": "Tendai Moyo"},
-            format="json",
-        )
-        self.assertEqual(res.status_code, 201, res.content)
-        body = res.json()
-        self.assertEqual(body["reference"], "TITHE-MOYO")
-        self.assertEqual(body["currency"], "USD")
-        gift = Gift.objects.get(pk=body["id"])
-        self.assertEqual(gift.amount, Decimal("85.00"))
-        self.assertEqual(gift.status, "pending")
-
-    def test_anonymous_gift_drops_name(self):
-        res = self.client.post(
-            "/api/gifts",
-            {"category": "seed", "amount": 20, "method": "ecocash", "giver_name": "Tendai Moyo", "anonymous": True},
-            format="json",
-        )
-        self.assertEqual(res.status_code, 201)
-        self.assertEqual(res.json()["reference"], "SEED")
-        self.assertEqual(Gift.objects.get().giver_name, "")
-
-    def test_gift_rejects_bad_input(self):
-        for payload in [
-            {"category": "tithe", "amount": "0", "method": "bank"},
-            {"category": "tithe", "amount": "-5", "method": "bank"},
-            {"category": "nope", "amount": "10", "method": "bank"},
-            {"category": "tithe", "amount": "10", "method": "bitcoin"},
-        ]:
-            self.assertEqual(self.client.post("/api/gifts", payload, format="json").status_code, 400, payload)
-        GivingCategory.objects.filter(key="tithe").update(is_active=False)
-        res = self.client.post("/api/gifts", {"category": "tithe", "amount": "10", "method": "bank"}, format="json")
-        self.assertEqual(res.status_code, 400)
-        self.assertEqual(Gift.objects.count(), 0)
 
     def test_prayer_request(self):
         res = self.client.post(

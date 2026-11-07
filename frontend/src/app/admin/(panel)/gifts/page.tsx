@@ -14,7 +14,7 @@ type GiftList = Paged<AdminGift> & {
   categories: Option[];
 };
 
-const STATUS_TONE: Record<string, Tone> = { pending: "warn", received: "ok", not_found: "bad" };
+const STATUS_TONE: Record<string, Tone> = { pending: "warn", received: "ok", failed: "muted", not_found: "bad" };
 
 function sumLine(byCurrency: Record<string, { total: string; count: number }> | undefined) {
   if (!byCurrency || !Object.keys(byCurrency).length) return { text: money(0, "USD"), count: 0 };
@@ -30,7 +30,7 @@ export default function GiftsPage() {
   const allowed = can("gifts.view");
   const canEdit = can("gifts.edit");
   const toast = useToast();
-  const [filters, setFilters] = useState({ status: "pending", method: "", category: "", q: "", date_from: "", date_to: "" });
+  const [filters, setFilters] = useState({ status: "", method: "", category: "", q: "", date_from: "", date_to: "" });
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
   const [open, setOpen] = useState<AdminGift | null>(null);
@@ -70,12 +70,12 @@ export default function GiftsPage() {
         title="Gifts"
         description={
           canEdit
-            ? "Gifts recorded from the giving page. Check each one against the EcoCash or bank statement, then mark it as received."
-            : "Gifts recorded from the giving page. You can view them; Admins confirm them."
+            ? "Gifts made on the giving page. PayPal and mobile money gifts are marked as received automatically when the money arrives."
+            : "Gifts made on the giving page. They're marked as received automatically when the money arrives."
         }
       />
       <div className="adm-totals">
-        <div className="adm-total"><span>Waiting for proof ({pending.count})</span><strong>{pending.text}</strong></div>
+        <div className="adm-total"><span>Waiting for payment ({pending.count})</span><strong>{pending.text}</strong></div>
         <div className="adm-total"><span>Received ({received.count})</span><strong>{received.text}</strong></div>
       </div>
       <div className="adm-filters">
@@ -124,7 +124,7 @@ export default function GiftsPage() {
         <Loading />
       ) : data && data.results.length === 0 ? (
         <Empty title={filters.status === "pending" ? "Nothing waiting" : "No gifts found"}>
-          {filters.status === "pending" ? "Every recorded gift has been checked." : "Try a different filter."}
+          {filters.status === "pending" ? "No payments are waiting to go through." : "Try a different filter."}
         </Empty>
       ) : data ? (
         <>
@@ -214,7 +214,12 @@ function GiftDetail({ gift, statuses, canEdit, onClose, onSaved }: {
         <dt>Amount</dt><dd>{money(gift.amount, gift.currency)}</dd>
         <dt>Type</dt><dd>{gift.category_label}{gift.purpose ? `: ${gift.purpose}` : ""}</dd>
         <dt>Paid by</dt><dd>{gift.method_label}</dd>
+        {gift.payer_phone && <><dt>Wallet number</dt><dd>{gift.payer_phone}</dd></>}
         <dt>Reference</dt><dd className="mono">{gift.reference}</dd>
+        {gift.provider_reference && (
+          <><dt>{gift.method === "paypal" ? "PayPal transaction" : "Paynow reference"}</dt><dd className="mono">{gift.provider_reference}</dd></>
+        )}
+        {gift.provider_status && <><dt>Payment status</dt><dd>{gift.provider_status}</dd></>}
         <dt>Giver</dt><dd>{gift.anonymous ? "Anonymous" : gift.giver_name || "Not given"}</dd>
         <dt>Contact</dt><dd>{gift.giver_contact || "Not given"}</dd>
         <dt>Recorded</dt><dd>{dateTime(gift.created_at, me?.time_zone)} (website gift #{gift.id})</dd>
@@ -226,7 +231,7 @@ function GiftDetail({ gift, statuses, canEdit, onClose, onSaved }: {
             {statuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </Field>
-        <Field label="Notes" htmlFor="gd-notes" full hint={canEdit ? "e.g. the bank statement line or EcoCash transaction ID." : "Only Admins can confirm gifts."}>
+        <Field label="Notes" htmlFor="gd-notes" full hint={canEdit ? "Anything the office should know about this gift." : "Only Admins can change gifts."}>
           <textarea id="gd-notes" value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} />
         </Field>
       </div>

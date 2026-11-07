@@ -143,7 +143,9 @@ REST_FRAMEWORK = {
         else ["rest_framework.renderers.JSONRenderer"]
     ),
     "DEFAULT_THROTTLE_RATES": {
-        "gifts": os.environ.get("THROTTLE_GIFTS", "30/hour"),
+        # Generous, because a whole congregation on the church Wi-Fi shares one address
+        "gifts": os.environ.get("THROTTLE_GIFTS", "200/hour"),
+        "payment_status": os.environ.get("THROTTLE_PAYMENT_STATUS", "3000/hour"),
         "prayer": os.environ.get("THROTTLE_PRAYER", "10/hour"),
         "login_burst": os.environ.get("THROTTLE_LOGIN_BURST", "8/minute"),
         "login_hourly": os.environ.get("THROTTLE_LOGIN_HOURLY", "40/hour"),
@@ -154,6 +156,18 @@ REST_FRAMEWORK = {
     "NUM_PROXIES": int(os.environ.get("DJANGO_PROXY_COUNT", "1")) or None,
     "UNAUTHENTICATED_USER": None,
 }
+
+# Online giving. Keys come from the environment, never the database (see README).
+# PayPal: https://developer.paypal.com/dashboard/applications  (Client ID + Secret)
+PAYPAL_CLIENT_ID = os.environ.get("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE = "live" if os.environ.get("PAYPAL_MODE", "sandbox").lower() == "live" else "sandbox"
+# Paynow (mobile money): Integration ID + Key from Paynow, and the merchant account's login email
+PAYNOW_INTEGRATION_ID = os.environ.get("PAYNOW_INTEGRATION_ID", "")
+PAYNOW_INTEGRATION_KEY = os.environ.get("PAYNOW_INTEGRATION_KEY", "")
+PAYNOW_AUTH_EMAIL = os.environ.get("PAYNOW_AUTH_EMAIL", "")
+# The public website address; Paynow sends payment updates to SITE_URL/api/payments/paynow/result
+SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")
 
 # Staff sessions: signed out after 4 hours without activity
 SESSION_COOKIE_AGE = int(os.environ.get("DJANGO_SESSION_SECONDS", str(4 * 60 * 60)))

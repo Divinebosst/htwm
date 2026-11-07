@@ -29,7 +29,8 @@ def _tracked():
         ServiceTime: {"type": "service time"},
         SiteSettings: {"type": "church settings", "repr": lambda o: "Church settings"},
         GivingCategory: {"type": "giving category"},
-        Gift: {"type": "gift", "hide": {"giver_contact"}},
+        Gift: {"type": "gift", "hide": {"giver_contact", "payer_phone"},
+               "exclude": {"public_id", "poll_url", "otp_url"}},
         PrayerRequest: {
             "type": "prayer request",
             "hide": {"name", "contact", "message", "staff_notes"},

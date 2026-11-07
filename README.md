@@ -28,17 +28,17 @@ Staff sign in at **`/admin`** on the website (for example `http://localhost:3000
 | Read **private** prayer requests | ✓ | | ✓ | |
 | Update prayer requests (status, notes) | ✓ | | ✓ | |
 | See gifts | ✓ | ✓ | ✓ | |
-| Confirm gifts (mark received) | ✓ | ✓ | | |
+| Change a gift's status by hand (rarely needed: online gifts confirm themselves) | ✓ | ✓ | | |
 | Edit giving categories | ✓ | ✓ | | |
 | See church settings / edit contact details | ✓ | ✓ | | |
-| Edit **payment details** (bank, EcoCash, card link) | ✓ | | | |
+| Edit the **giving currency** and quick-pick amounts | ✓ | | | |
 | Manage staff accounts | All roles | Pastors and Caretakers | | |
 | Read the audit log | ✓ | ✓ | | |
 
 The rules live in one file, `backend/accounts/roles.py`. The API checks them on every request, so hiding a menu item is never the only protection. Some choices worth knowing:
 
 - **Private prayer requests** are only shown to Pastors and System Admins, because the prayer form promises "only the pastors and prayer team will read it".
-- **Payment details** can only be changed by a System Admin, so a stolen Admin password can't redirect the church's money. Every change is logged with the old and new values.
+- **Where money goes** can't be changed in the admin at all: the PayPal and Paynow accounts are connected on the server (see [Online giving](#online-giving-paypal-and-mobile-money)), so a stolen staff password can't redirect the church's money. The giving currency can only be changed by a System Admin, and every change is logged with the old and new values.
 - **Accounts are switched off, never deleted**, so the audit log always says who did what. Nobody can change their own role, and the last active System Admin can't be removed.
 
 ### Audit log
@@ -47,7 +47,7 @@ The audit log records every sign-in, failed sign-in, sign-out, password change o
 
 - Entries **can't be edited or deleted** by anyone, through the admin or the code.
 - Personal details stay out of the log: for prayer requests only the type, privacy flag and status are recorded, never the name, contact or message.
-- Changes made on the public website (gifts, prayer requests) are logged as "Public website".
+- Changes made on the public website (prayer requests) are logged as "Public website". Payments confirmed by PayPal or Paynow are logged as "Online payments", and unfinished payments closed after a day as "System".
 
 ### Other protections
 
@@ -103,15 +103,42 @@ Open http://localhost:3000 for the website and http://localhost:3000/admin for t
 
 ## Before going live: fill these in
 
-1. **Church settings → Payment details** (System Admin): EcoCash merchant code, bank details, card/PayPal link, and who collects money sent from abroad.
+1. **Online giving**: connect the church's PayPal and Paynow accounts (see [Online giving](#online-giving-paypal-and-mobile-money)). Until then the giving page says each option is being set up.
 2. **Service times**: the sample times (Sunday 10:00 AM, Wednesday 5:30 PM, Friday 6:00 PM) are made up.
 3. **Events**: replace the sample events with real ones.
 4. **Phone numbers**: the flier shows `0770772105160`, which has too many digits. Please confirm it.
-5. **WhatsApp number**: set to `263775856800` (0775 856 800 with Zimbabwe's code). Proof of payment and failed prayer requests go here.
+5. **WhatsApp number**: set to `263775856800` (0775 856 800 with Zimbabwe's code). Prayer requests that fail to send go here.
 6. **Time zone**: event times are shown in `Africa/Harare`. Change `DJANGO_TIME_ZONE` if the church is elsewhere.
 7. **Photos**: the logo and photo were cut from the flier. Replace `frontend/src/assets/logo.png` and `apostles.jpg` with sharper originals.
 
 Edits made in the admin show on the website straight away. A single event's own page may show the old version for one more page load while it rebuilds; everything updates within a minute at most.
+
+## Online giving (PayPal and mobile money)
+
+The giving page takes money in two ways. Both confirm themselves, so nobody has to check statements or ask givers for proof:
+
+| Option | How the giver pays | How it's confirmed |
+|---|---|---|
+| **PayPal** (shown first) | PayPal's own buttons: a PayPal account, or **Debit or Credit Card** without one | The server takes the payment through PayPal and marks the gift received |
+| **Mobile money** | Tap **EcoCash**, **InnBucks**, **O'mari** or **OneMoney** and enter their number. EcoCash and OneMoney pop up a PIN prompt on the phone; InnBucks gives a code to approve in the InnBucks app; O'mari texts a one-time code to type on the page | Paynow tells the server when it's paid, and the page checks every few seconds |
+
+As soon as the money arrives the page shows a thank-you message with a gift number, and the gift shows as **Received** in the admin. The amount is set by the server, not the browser, and a gift only counts once PayPal or Paynow confirms the full amount. Payments someone starts but never finishes are closed after a day. **Church settings** in the admin shows whether each option is connected.
+
+### Connect PayPal
+
+1. Sign in to [developer.paypal.com](https://developer.paypal.com/dashboard/applications) with the church's PayPal **business** account and create an app under **Apps & Credentials**.
+2. On the backend server set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and `PAYPAL_MODE=sandbox`, then make a test gift with a sandbox buyer account.
+3. Switch to the **Live** credentials and set `PAYPAL_MODE=live`.
+
+### Connect mobile money (Paynow)
+
+1. In the church's [Paynow](https://www.paynow.co.zw) account, create an integration in the giving currency (USD). Paynow sends an **integration ID** and **integration key**. Ask Paynow to switch on each wallet you want (EcoCash, OneMoney, InnBucks, O'mari).
+2. On the backend server set `PAYNOW_INTEGRATION_ID`, `PAYNOW_INTEGRATION_KEY`, `PAYNOW_AUTH_EMAIL` (the email you sign in to Paynow with) and `SITE_URL` (the public website address, e.g. `https://www.healtheworldministries.com`). Paynow sends payment updates to `SITE_URL/api/payments/paynow/result`, so it must be reachable from the internet.
+3. While the integration is in test mode, these numbers simulate a payment: `0771111111` succeeds, `0772222222` succeeds after a delay, `0773333333` is cancelled, `0774444444` fails for low balance. Then ask Paynow to make the integration live.
+
+All of these go in `backend/.env` (see `backend/.env.example`) or the host's environment settings. Restart the backend after changing them. The keys are never stored in the database or shown in the admin.
+
+The wallet logos are in `frontend/public/payments/`. The EcoCash and OneMoney files are small copies from Paynow's website; replace them with the official logo files (same names) for a sharper look.
 
 ## Putting it online
 
@@ -184,7 +211,12 @@ Public:
 | GET | `/api/events` | Upcoming events. `?limit=3`, `?when=past` |
 | GET | `/api/events/<slug>` | One event |
 | GET | `/api/giving-categories` | Tithe, Offering, … |
-| POST | `/api/gifts` | Records a gift |
+| POST | `/api/payments/paypal/orders` | Starts a PayPal payment (called by the PayPal button) |
+| POST | `/api/payments/paypal/orders/<order id>/capture` | Takes the PayPal payment once the giver approves it |
+| POST | `/api/payments/mobile` | Sends a mobile money payment request to the giver's phone |
+| POST | `/api/payments/mobile/<id>/otp` | O'mari: the one-time code from the SMS |
+| GET | `/api/payments/<id>` | A payment's status (the page asks every few seconds while it waits) |
+| POST | `/api/payments/paynow/result` | Paynow's payment updates (checked against Paynow's signature) |
 | POST | `/api/prayer-requests` | Saves a prayer request |
 
 Staff (session cookie + CSRF token; permissions as in the roles table):
@@ -205,6 +237,6 @@ Staff (session cookie + CSRF token; permissions as in the roles table):
 ## Tests and checks
 
 ```bash
-cd backend && python manage.py test              # 50 tests: API, every role, accounts, audit log
+cd backend && python manage.py test              # 67 tests: API, every role, accounts, audit log, payments
 cd frontend && npm run lint && npx tsc --noEmit  # code checks
 ```

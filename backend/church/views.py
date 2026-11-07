@@ -6,7 +6,6 @@ from rest_framework.views import APIView
 from .models import Event, GivingCategory, ServiceTime, SiteSettings
 from .serializers import (
     EventSerializer,
-    GiftCreateSerializer,
     GivingCategorySerializer,
     PrayerRequestCreateSerializer,
     ServiceTimeSerializer,
@@ -66,17 +65,6 @@ class GivingCategoryList(generics.ListAPIView):
 
     def get_queryset(self):
         return GivingCategory.objects.filter(is_active=True)
-
-
-class GiftCreate(mixins.CreateModelMixin, generics.GenericAPIView):
-    """POST /api/gifts — records a gift so the finance team can match the payment."""
-
-    serializer_class = GiftCreateSerializer
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "gifts"
-
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
 
 
 class PrayerRequestCreate(mixins.CreateModelMixin, generics.GenericAPIView):

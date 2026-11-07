@@ -33,7 +33,8 @@ def record(action, *, obj=None, object_type="", object_id="", object_repr="", ch
             label = actor.get_username()
             role = ROLE_LABELS.get(role_of(actor) or "", "")
         else:
-            label = actor_label or {"public": "Public website", "system": "System"}.get(source, "Unknown")
+            label = actor_label or {"public": "Public website", "payments": "Online payments",
+                                    "system": "System"}.get(source, "Unknown")
             role = ""
 
         if obj is not None:

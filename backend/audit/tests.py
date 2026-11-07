@@ -89,12 +89,12 @@ class AuditTrailTests(TestCase):
         sysadmin = make_staff("sys", SYSTEM_ADMIN)
         c = APIClient()
         c.login(username="sys", password=PASSWORD)
-        c.patch("/api/admin/settings", {"bank_account_number": "111"}, format="json")
-        c.patch("/api/admin/settings", {"bank_account_number": "222"}, format="json")
+        c.patch("/api/admin/settings", {"preset_amounts": "10,20"}, format="json")
+        c.patch("/api/admin/settings", {"preset_amounts": "20,50"}, format="json")
         last = AuditLog.objects.filter(object_type="church settings").first()
-        self.assertEqual(last.changes["bank_account_number"], ["111", "222"])
+        self.assertEqual(last.changes["preset_amounts"], ["10,20", "20,50"])
         self.assertEqual(last.actor, sysadmin)
-        self.assertEqual(SiteSettings.load().bank_account_number, "222")
+        self.assertEqual(SiteSettings.load().preset_amounts, "20,50")
 
     def test_log_cannot_be_changed_or_deleted(self):
         entry = AuditLog.objects.create(actor_label="x", action="login")

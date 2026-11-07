@@ -1,16 +1,14 @@
-from decimal import Decimal
-
 from django.conf import settings as django_settings
 from rest_framework import serializers
 
+from . import paynow, paypal
+
 from .models import (
     Event,
-    Gift,
     GivingCategory,
     PrayerRequest,
     ServiceTime,
     SiteSettings,
-    build_reference,
     split_commas,
     split_lines,
 )
@@ -45,6 +43,9 @@ class SiteSettingsSerializer(serializers.BaseSerializer):
                     "swift": s.bank_swift,
                 },
                 "online_giving_url": s.online_giving_url,
+                "paypal_client_id": django_settings.PAYPAL_CLIENT_ID if paypal.is_configured() else "",
+                "paypal_mode": django_settings.PAYPAL_MODE,
+                "mobile_money_enabled": paynow.is_configured(),
                 "abroad": {
                     "recipient_name": s.abroad_recipient_name,
                     "recipient_phone": s.abroad_recipient_phone,
@@ -96,52 +97,6 @@ class GivingCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = GivingCategory
         fields = ["key", "label", "description", "reference_code", "asks_purpose"]
-
-
-class GiftCreateSerializer(serializers.ModelSerializer):
-    category = serializers.SlugRelatedField(slug_field="key", queryset=GivingCategory.objects.filter(is_active=True))
-    amount = serializers.DecimalField(
-        max_digits=12, decimal_places=2, min_value=Decimal("1.00"), max_value=Decimal("1000000")
-    )
-    giver_name = serializers.CharField(max_length=120, required=False, allow_blank=True, trim_whitespace=True)
-    giver_contact = serializers.CharField(max_length=120, required=False, allow_blank=True, trim_whitespace=True)
-    purpose = serializers.CharField(max_length=140, required=False, allow_blank=True, trim_whitespace=True)
-
-    # Read-only fields returned to the website after saving
-    category_label = serializers.CharField(source="category.label", read_only=True)
-    method_label = serializers.CharField(source="get_method_display", read_only=True)
-
-    class Meta:
-        model = Gift
-        fields = [
-            "id",
-            "category",
-            "category_label",
-            "purpose",
-            "amount",
-            "currency",
-            "method",
-            "method_label",
-            "giver_name",
-            "giver_contact",
-            "anonymous",
-            "reference",
-            "created_at",
-        ]
-        read_only_fields = ["id", "currency", "reference", "created_at"]
-
-    def validate(self, attrs):
-        if attrs.get("anonymous"):
-            attrs["giver_name"] = ""
-        return attrs
-
-    def create(self, validated):
-        site = SiteSettings.load()
-        validated["currency"] = site.currency
-        validated["reference"] = build_reference(
-            validated["category"].reference_code, validated.get("giver_name", ""), validated.get("anonymous", False)
-        )
-        return super().create(validated)
 
 
 class PrayerRequestCreateSerializer(serializers.ModelSerializer):

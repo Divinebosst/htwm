@@ -65,14 +65,16 @@ class GivingCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Gift)
 class GiftAdmin(admin.ModelAdmin):
-    list_display = ["created_at", "reference", "giver", "category", "amount_display", "method", "status"]
-    list_filter = ["status", "method", "category", "created_at"]
+    list_display = ["created_at", "reference", "giver", "category", "amount_display", "payment_label", "status"]
+    list_filter = ["status", "method", "provider", "category", "created_at"]
     search_fields = ["reference", "giver_name", "giver_contact", "purpose"]
     date_hierarchy = "created_at"
-    readonly_fields = ["category", "purpose", "amount", "currency", "method", "reference", "giver_name",
-                       "giver_contact", "anonymous", "created_at", "confirmed_at"]
-    fields = ["category", "purpose", "amount", "currency", "method", "reference", "giver_name", "giver_contact",
-              "anonymous", "status", "staff_notes", "created_at", "confirmed_at"]
+    readonly_fields = ["category", "purpose", "amount", "currency", "method", "provider", "payer_phone", "reference",
+                       "giver_name", "giver_contact", "anonymous", "provider_order_id", "provider_reference",
+                       "provider_status", "created_at", "confirmed_at"]
+    fields = ["category", "purpose", "amount", "currency", "method", "provider", "payer_phone", "reference",
+              "giver_name", "giver_contact", "anonymous", "status", "provider_order_id", "provider_reference",
+              "provider_status", "staff_notes", "created_at", "confirmed_at"]
     actions = ["mark_received", "mark_not_found"]
 
     def has_add_permission(self, request):

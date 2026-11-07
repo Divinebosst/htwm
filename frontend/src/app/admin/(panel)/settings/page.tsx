@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { refreshPublicSite } from "@/app/admin/actions";
 import { ApiError, api } from "@/admin/api";
 import { useAuth } from "@/admin/auth";
-import { ErrorNote, Field, Loading, NoAccess, PageHeader, useToast } from "@/admin/ui";
+import { ErrorNote, Field, Loading, NoAccess, PageHeader, Pill, useToast } from "@/admin/ui";
 import { useApi } from "@/admin/useApi";
 import { LockIcon } from "@/components/icons";
 
@@ -15,6 +15,7 @@ type SettingsData = {
   payment_fields: string[];
   can_edit_contact: boolean;
   can_edit_payment: boolean;
+  online_payments: { paypal: boolean; paypal_mode: string; mobile_money: boolean };
 };
 
 const LABELS: Record<string, { label: string; hint?: string; multiline?: boolean }> = {
@@ -22,27 +23,13 @@ const LABELS: Record<string, { label: string; hint?: string; multiline?: boolean
   short_name: { label: "Short name", hint: "Used in WhatsApp messages." },
   phone_primary: { label: "Main phone number" },
   phone_secondary: { label: "Second phone number" },
-  whatsapp_number: { label: "WhatsApp number", hint: "Digits only with country code, e.g. 263775856800. Proof of payment goes here." },
+  whatsapp_number: { label: "WhatsApp number", hint: "Digits only with country code, e.g. 263775856800." },
   email: { label: "Email address" },
   facebook_url: { label: "Facebook page link" },
   youtube_url: { label: "YouTube link" },
   website_url: { label: "Website address" },
-  currency: { label: "Giving currency", hint: "Three-letter code, e.g. USD, ZAR, AUD." },
+  currency: { label: "Giving currency", hint: "Three-letter code, e.g. USD. Must be a currency your PayPal and Paynow accounts accept." },
   preset_amounts: { label: "Quick-pick amounts", hint: "Separated by commas, e.g. 10,20,50,100" },
-  ecocash_merchant_name: { label: "EcoCash merchant name" },
-  ecocash_merchant_code: { label: "EcoCash merchant code" },
-  ecocash_steps: { label: "EcoCash payment steps", hint: "One step per line.", multiline: true },
-  bank_account_name: { label: "Bank account name" },
-  bank_name: { label: "Bank" },
-  bank_branch: { label: "Branch" },
-  bank_account_number: { label: "Account number" },
-  bank_account_currency: { label: "Account currency" },
-  bank_swift: { label: "SWIFT code", hint: "For gifts from other countries." },
-  online_giving_url: { label: "Card / PayPal giving link", hint: "Leave empty to show “Coming soon”." },
-  abroad_recipient_name: { label: "Who collects money sent from abroad", hint: "Full name exactly as on their ID." },
-  abroad_recipient_phone: { label: "Their phone number" },
-  abroad_country: { label: "Country they collect in" },
-  abroad_services: { label: "Transfer services", hint: "Separated by commas." },
 };
 
 export default function SettingsPage() {
@@ -53,7 +40,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Church settings" description="Contact details and the payment details shown on the giving page." />
+      <PageHeader title="Church settings" description="Contact details, and how giving works on the website." />
       {error && <ErrorNote error={error} onRetry={reload} />}
       {loading && !data && <Loading />}
       {data && (
@@ -67,19 +54,50 @@ export default function SettingsPage() {
             canEdit={data.can_edit_contact}
             onSaved={reload}
           />
+          <OnlinePayments status={data.online_payments} />
           <SettingsSection
             key={`payment-${JSON.stringify(data.values)}`}
-            title="Payment details"
-            note="Where givers send money. Every change is recorded in the audit log with the old and new values."
+            title="Giving"
+            note="The currency and quick-pick amounts on the giving page. Every change is recorded in the audit log."
             fields={data.payment_fields}
             values={data.values}
             canEdit={data.can_edit_payment}
-            lockedMessage="Only a System Admin can change where money is sent. Contact your System Admin if these details need updating."
+            lockedMessage="Only a System Admin can change the giving currency and amounts."
             onSaved={reload}
           />
         </>
       )}
     </>
+  );
+}
+
+function OnlinePayments({ status }: { status: SettingsData["online_payments"] }) {
+  const rows = [
+    {
+      name: "PayPal and cards",
+      on: status.paypal,
+      detail: status.paypal ? (status.paypal_mode === "live" ? "Live: real payments" : "Sandbox: test payments only") : "Not connected",
+    },
+    { name: "Mobile money (Paynow)", on: status.mobile_money, detail: status.mobile_money ? "EcoCash, InnBucks, O'mari and OneMoney" : "Not connected" },
+  ];
+  return (
+    <section className="adm-card" aria-labelledby="h-online-payments">
+      <div className="adm-card-head">
+        <h2 id="h-online-payments">Online payments</h2>
+        <span className="adm-card-note">
+          Gifts are confirmed automatically. The payment accounts are connected on the server by whoever looks after the
+          website.
+        </span>
+      </div>
+      <dl className="adm-dl">
+        {rows.map((r) => (
+          <Fragment key={r.name}>
+            <dt>{r.name}</dt>
+            <dd><Pill tone={r.on ? "ok" : "warn"}>{r.on ? "Connected" : "Not connected"}</Pill> {r.on && r.detail}</dd>
+          </Fragment>
+        ))}
+      </dl>
+    </section>
   );
 }
 

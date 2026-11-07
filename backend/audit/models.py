@@ -28,6 +28,7 @@ class AuditLog(models.Model):
         ("staff", "Staff admin"),
         ("django_admin", "Django admin"),
         ("public", "Public website"),
+        ("payments", "Online payments"),
         ("system", "System"),
     ]
 

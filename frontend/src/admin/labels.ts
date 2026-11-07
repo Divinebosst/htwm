@@ -12,7 +12,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "giving.edit": "Edit giving categories",
   "settings.view": "See church settings",
   "settings.edit_contact": "Edit contact details",
-  "settings.edit_payment": "Edit payment details",
+  "settings.edit_payment": "Edit the giving currency and amounts",
   "users.view": "See staff accounts",
   "users.edit": "Add and manage staff accounts",
   "audit.view": "Read the audit log",

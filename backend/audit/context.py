@@ -1,5 +1,6 @@
 """Remembers the current web request so audit entries know who acted and from where."""
 
+from contextlib import contextmanager
 from contextvars import ContextVar
 
 from django.conf import settings
@@ -9,6 +10,16 @@ _current_request = ContextVar("audit_request", default=None)
 
 def current_request():
     return _current_request.get()
+
+
+@contextmanager
+def as_system():
+    """Record changes made inside this block as the system's, not the signed-in person's."""
+    token = _current_request.set(None)
+    try:
+        yield
+    finally:
+        _current_request.reset(token)
 
 
 class AuditContextMiddleware:
@@ -43,4 +54,6 @@ def source_of(request):
         return "staff"
     if path.startswith("/django-admin/"):
         return "django_admin"
+    if path.startswith("/api/payments/"):
+        return "payments"
     return "public"

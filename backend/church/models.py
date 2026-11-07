@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.core.validators import MinValueValidator, RegexValidator
@@ -211,27 +212,49 @@ def build_reference(code, name="", anonymous=False):
 
 class Gift(models.Model):
     METHODS = [
+        ("paypal", "PayPal or card"),
+        ("mobile", "Mobile money"),
+        # Older, manually confirmed methods (kept for gifts recorded before online payments)
         ("ecocash", "EcoCash"),
         ("bank", "Bank transfer"),
         ("card", "Card / PayPal"),
         ("abroad", "From abroad"),
     ]
+    PROVIDERS = [
+        ("ecocash", "EcoCash"),
+        ("innbucks", "InnBucks"),
+        ("omari", "O'mari"),
+        ("onemoney", "OneMoney"),
+    ]
     STATUSES = [
-        ("pending", "Waiting for proof"),
+        ("pending", "Waiting for payment"),
         ("received", "Received"),
+        ("failed", "Failed or cancelled"),
         ("not_found", "Not found"),
     ]
 
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False,
+                                 help_text="Private link to this payment's status for the giver's browser.")
     category = models.ForeignKey(GivingCategory, on_delete=models.PROTECT, related_name="gifts")
     purpose = models.CharField(max_length=140, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
     currency = models.CharField(max_length=3)
     method = models.CharField(max_length=10, choices=METHODS)
+    provider = models.CharField(max_length=10, choices=PROVIDERS, blank=True, help_text="Mobile money wallet.")
+    payer_phone = models.CharField(max_length=20, blank=True, help_text="Mobile money number that paid.")
     reference = models.CharField(max_length=40, db_index=True)
     giver_name = models.CharField(max_length=120, blank=True)
     giver_contact = models.CharField(max_length=120, blank=True)
     anonymous = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUSES, default="pending")
+    # Payment provider details
+    provider_order_id = models.CharField(max_length=64, blank=True, db_index=True,
+                                         help_text="PayPal order ID, or the reference sent to Paynow.")
+    provider_reference = models.CharField(max_length=64, blank=True,
+                                          help_text="PayPal capture ID or Paynow reference for the payment.")
+    provider_status = models.CharField(max_length=40, blank=True, help_text="Last status reported by the provider.")
+    poll_url = models.URLField(max_length=300, blank=True)
+    otp_url = models.URLField(max_length=300, blank=True)
     staff_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
@@ -241,6 +264,12 @@ class Gift(models.Model):
 
     def __str__(self):
         return f"#{self.pk} {self.reference} {self.currency} {self.amount}"
+
+    @property
+    def payment_label(self):
+        if self.method == "mobile" and self.provider:
+            return f"Mobile money · {self.get_provider_display()}"
+        return self.get_method_display()
 
 
 class PrayerRequest(models.Model):

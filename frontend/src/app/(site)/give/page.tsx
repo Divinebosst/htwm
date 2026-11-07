@@ -7,7 +7,7 @@ import { telHref } from "@/lib/format";
 export const metadata: Metadata = {
   title: "Give",
   description:
-    "Give your tithes, offerings, seeds and building fund to Heal The World Ministries International by EcoCash, bank transfer, card or from abroad.",
+    "Give your tithes, offerings, seeds and building fund to Heal The World Ministries International with PayPal, a card, EcoCash, InnBucks, O'mari or OneMoney.",
 };
 
 export default function GivePage({ searchParams }: PageProps<"/give">) {
@@ -45,8 +45,6 @@ async function GiveFormWithData({ searchParams }: Pick<PageProps<"/give">, "sear
       key={initialType}
       initialType={initialType}
       giving={settings.giving}
-      whatsapp={settings.whatsapp}
-      shortName={settings.short_name}
       churchName={settings.church_name}
       categories={categories}
     />
@@ -90,31 +88,33 @@ async function GivingFaq() {
             </p>
           </details>
           <details>
-            <summary>Why should I use the payment reference?</summary>
+            <summary>How do I give with mobile money?</summary>
             <p>
-              The reference tells the church office what your gift is for and who sent it, so your tithe, offering or
-              seed is recorded correctly. Type it exactly as shown in the reference or notes field of your payment.
+              Choose Mobile money, tap EcoCash, InnBucks, O&apos;mari or OneMoney, and enter your number. You&apos;ll get a
+              prompt on your phone (or a code for InnBucks and O&apos;mari) to approve the payment. The page shows a
+              thank-you message as soon as it goes through.
             </p>
           </details>
           <details>
             <summary>Will I get a receipt?</summary>
             <p>
-              Yes. After you give, tap “Send proof on WhatsApp” and send your confirmation message or bank slip. The
-              church office will confirm that your gift was received.
+              Yes. Your gift is confirmed on the page as soon as it&apos;s received, with a gift number for your records.
+              PayPal also emails you a receipt, and mobile money wallets send a confirmation SMS.
             </p>
           </details>
           <details>
             <summary>Can I give from outside the country?</summary>
             <p>
-              Yes. Choose “From abroad” to send through a money transfer service, or use the bank details with the
-              SWIFT code for an international transfer.
+              Yes. Use the PayPal button, or Debit or Credit Card if you don&apos;t have a PayPal account. Gifts are in{" "}
+              {settings.giving.currency}, and PayPal or your bank converts from your own currency.
             </p>
           </details>
           <details>
             <summary>Is my giving safe?</summary>
             <p>
-              Only send money to the accounts shown on this page. If anyone contacts you asking for money on behalf of
-              the ministry through a different number or account, please call the church office first.
+              Yes. Card and PayPal payments are handled by PayPal, and mobile money by Paynow, so the church never sees
+              your card details or PIN. If anyone asks you to send money for the ministry to a personal number, please
+              call the church office first.
             </p>
           </details>
         </div>

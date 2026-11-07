@@ -65,10 +65,10 @@ export default function DashboardPage() {
             )}
             {data.gifts && (
               <>
-                <Link className={`adm-stat${data.gifts.pending_count ? " attention" : ""}`} href="/admin/gifts">
-                  <span>Gifts waiting for proof</span>
+                <Link className="adm-stat" href="/admin/gifts">
+                  <span>Payments in progress</span>
                   <strong>{data.gifts.pending_count}</strong>
-                  <small>{totals(data.gifts.pending_totals)} to check</small>
+                  <small>{totals(data.gifts.pending_totals)} started but not paid yet</small>
                 </Link>
                 <Link className="adm-stat" href="/admin/gifts">
                   <span>Received this month</span>
