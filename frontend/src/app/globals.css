@@ -354,14 +354,13 @@ body::before {
 /* Leaders' photo, now in the About section */
 .leaders-photo { justify-self: center; width: min(100%, 420px); margin: 0; }
 .arch {
-  background: #ffffff;
+  background: var(--royal);
   border-radius: 999px 999px 0 0;
-  padding: 28px 18px 0;
   border: 3px solid var(--gold);
   border-bottom: 0;
   overflow: hidden;
 }
-.arch img { width: 100%; }
+.arch img { display: block; width: 100%; height: auto; }
 .hero-caption {
   background: var(--royal);
   color: #ffffff;

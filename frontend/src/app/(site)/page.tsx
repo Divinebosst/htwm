@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import apostles from "@/assets/apostles.jpg";
+import leaders from "@/assets/leaders.jpg";
 import logo from "@/assets/logo.png";
 import { EventRow, FeaturedEvent, NoEvents } from "@/components/Events";
 import PrayerForm from "@/components/PrayerForm";
@@ -192,8 +192,9 @@ function About() {
           <figure className="leaders-photo">
             <div className="arch">
               <Image
-                src={apostles}
-                alt="Apostle Chrispen Mahovo preaching, with Prophetess Yvonne Mahovo"
+                src={leaders}
+                alt="Apostle Chrispen Mahovo standing beside Prophetess Yvonne Mahovo, both dressed in purple"
+                placeholder="blur"
                 sizes="(max-width: 860px) 360px, 420px"
               />
             </div>

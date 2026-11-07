@@ -109,7 +109,7 @@ Open http://localhost:3000 for the website and http://localhost:3000/admin for t
 4. **Phone numbers**: the flier shows `0770772105160`, which has too many digits. Please confirm it.
 5. **WhatsApp number**: set to `263775856800` (0775 856 800 with Zimbabwe's code). Prayer requests that fail to send go here.
 6. **Time zone**: event times are shown in `Africa/Harare`. Change `DJANGO_TIME_ZONE` if the church is elsewhere.
-7. **Photos**: the logo and photo were cut from the flier. Replace `frontend/src/assets/logo.png` and `apostles.jpg` with sharper originals.
+7. **Photos**: the logo was cut from the flier. Replace `frontend/src/assets/logo.png` with a sharper original. The leaders' photo is `frontend/src/assets/leaders.jpg`.
 
 Edits made in the admin show on the website straight away. A single event's own page may show the old version for one more page load while it rebuilds; everything updates within a minute at most.
 
