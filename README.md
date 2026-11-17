@@ -4,7 +4,7 @@ Church website for **Heal The World Ministries International (Omega Family Churc
 
 | Part | Built with | What it does |
 |---|---|---|
-| `frontend/` | Next.js 16 (React, TypeScript) | The public website (home page with upcoming events, events pages, giving page, prayer request form) and the **staff admin** at `/admin` |
+| `frontend/` | Next.js 16 (React, TypeScript) | The public website (home page with upcoming events, events pages, giving page, church store, prayer request form) and the **staff admin** at `/admin` |
 | `backend/` | Django 5.2 + Django REST Framework | The API, staff sign-in, roles and permissions, and the audit log |
 
 ```
@@ -30,6 +30,9 @@ Staff sign in at **`/admin`** on the website (for example `http://localhost:3000
 | See gifts | ✓ | ✓ | ✓ | |
 | Change a gift's status by hand (rarely needed: online gifts confirm themselves) | ✓ | ✓ | | |
 | Edit giving categories | ✓ | ✓ | | |
+| Add and edit store items, delivery settings | ✓ | ✓ | | |
+| See store orders | ✓ | ✓ | ✓ | |
+| Update store orders (ready, completed, cancelled) | ✓ | ✓ | | |
 | See church settings / edit contact details | ✓ | ✓ | | |
 | Edit the **giving currency** and quick-pick amounts | ✓ | | | |
 | Manage staff accounts | All roles | Pastors and Caretakers | | |
@@ -83,10 +86,11 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py createsuperuser   # your System Admin login
 python manage.py load_sample_content
+python manage.py load_sample_store
 python manage.py runserver
 ```
 
-`load_sample_content` adds **example** service times and six **example** events so the site isn't empty. Edit or delete them in the admin, or remove them all with `python manage.py load_sample_content --clear`.
+`load_sample_content` adds **example** service times and six **example** events so the site isn't empty. Edit or delete them in the admin, or remove them all with `python manage.py load_sample_content --clear`. `load_sample_store` does the same for the store (see [Church store](#church-store)).
 
 ### 2. Frontend (Next.js)
 
@@ -105,7 +109,7 @@ Open http://localhost:3000 for the website and http://localhost:3000/admin for t
 
 1. **Online giving**: connect the church's PayPal and Paynow accounts (see [Online giving](#online-giving-paypal-and-mobile-money)). Until then the giving page says each option is being set up.
 2. **Service times**: the sample times (Sunday 10:00 AM, Wednesday 5:30 PM, Friday 6:00 PM) are made up.
-3. **Events**: replace the sample events with real ones.
+3. **Events and store**: replace the sample events and store items with real ones (`load_sample_store --clear` removes the sample items).
 4. **Phone numbers**: the flier shows `0770772105160`, which has too many digits. Please confirm it.
 5. **WhatsApp number**: set to `263775856800` (0775 856 800 with Zimbabwe's code). Prayer requests that fail to send go here.
 6. **Time zone**: event times are shown in `Africa/Harare`. Change `DJANGO_TIME_ZONE` if the church is elsewhere.
@@ -139,6 +143,27 @@ As soon as the money arrives the page shows a thank-you message with a gift numb
 All of these go in `backend/.env` (see `backend/.env.example`) or the host's environment settings. Restart the backend after changing them. The keys are never stored in the database or shown in the admin.
 
 The wallet logos are in `frontend/public/payments/`. The EcoCash and OneMoney files are small copies from Paynow's website; replace them with the official logo files (same names) for a sharper look.
+
+## Church store
+
+The store at `/store` sells the ministry's books, sermons, clothing and gifts.
+
+- **Visitors** browse by type, open an item, pick a size if it has sizes, and add it to the cart. The cart is kept in their browser; prices, stock and totals are always worked out again by the server before anyone pays.
+- **Checkout** asks for a name and phone number, then collection at church (free) or delivery (a fee you set). Payment uses the same PayPal and mobile money options as the giving page, so it needs the same [PayPal and Paynow keys](#online-giving-paypal-and-mobile-money).
+- **When the payment goes through**, the buyer sees their order number and a link to check on it later, and the items come out of stock. Cancelling a paid order puts them back.
+
+**Staff admin:**
+
+- **Store items**: add, edit, hide or delete items, with a picture, a price, how many are in stock (or no limit), and choices such as sizes. Items running low or sold out are marked. Below the list, set the delivery fee and the notes about delivery and collection.
+- **Store orders**: orders are marked as paid automatically. Open one to see what to prepare and who it's for, message the buyer on WhatsApp, then press **Mark ready to collect** (or **Mark as sent**) and later **Mark collected** (or **Mark delivered**). The dashboard shows how many orders are waiting to be prepared.
+
+**Sample items.** To see the store working with example items and pictures:
+
+```bash
+python manage.py load_sample_store
+```
+
+Add `--orders` to also create four example orders for the admin pages, and `--clear` to remove all the examples. Running it again updates the examples rather than adding copies. Example orders count in the dashboard's sales figures, so clear them before going live.
 
 ## Putting it online
 
@@ -224,6 +249,11 @@ Public:
 | GET | `/api/payments/<id>` | A payment's status (the page asks every few seconds while it waits) |
 | POST | `/api/payments/paynow/result` | Paynow's payment updates (checked against Paynow's signature) |
 | POST | `/api/prayer-requests` | Saves a prayer request |
+| GET | `/api/store/products`, `/api/store/products/<slug>` | Store items for sale |
+| POST | `/api/store/quote` | Current prices, stock and totals for a cart |
+| POST | `/api/store/checkout/paypal`, `/checkout/paypal/<order id>/capture` | Order and pay with PayPal or a card |
+| POST | `/api/store/checkout/mobile`, `/api/store/orders/<id>/otp` | Order and pay with mobile money |
+| GET | `/api/store/orders/<id>` | An order's status and receipt (private link for the buyer) |
 
 Staff (session cookie + CSRF token; permissions as in the roles table):
 
@@ -237,12 +267,15 @@ Staff (session cookie + CSRF token; permissions as in the roles table):
 | `/api/admin/gifts`, `/gifts/<id>`, `/gifts/bulk` | Gifts, including marking many as received |
 | `/api/admin/giving-categories`, `/<id>` | Giving categories |
 | `/api/admin/settings` | Church settings |
+| `/api/admin/store/products`, `/products/<id>`, `/products/<id>/image` | Store items and their pictures |
+| `/api/admin/store/orders`, `/orders/<id>` | Store orders and their status |
+| `/api/admin/store/settings` | Delivery fee and collection/delivery notes |
 | `/api/admin/users`, `/users/<id>`, `/users/<id>/reset-password` | Staff accounts |
 | `/api/admin/audit` | Audit log with filters |
 
 ## Tests and checks
 
 ```bash
-cd backend && python manage.py test              # 67 tests: API, every role, accounts, audit log, payments
+cd backend && python manage.py test              # 83 tests: API, every role, accounts, audit log, payments, store
 cd frontend && npm run lint && npx tsc --noEmit  # code checks
 ```

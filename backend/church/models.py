@@ -69,6 +69,16 @@ class SiteSettings(models.Model):
     abroad_country = models.CharField(max_length=60, blank=True, default="Zimbabwe")
     abroad_services = models.CharField(max_length=200, blank=True, default="Mukuru, WorldRemit, Western Union")
 
+    # Store
+    store_delivery_enabled = models.BooleanField(default=True, help_text="Offer delivery as well as collection.")
+    store_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("5.00"),
+                                             validators=[MinValueValidator(Decimal("0"))])
+    store_delivery_note = models.CharField(max_length=200, blank=True,
+                                           default="Delivered in Harare within 3 working days.")
+    store_collect_note = models.CharField(max_length=200, blank=True,
+                                          default="Collect from the church office after any service. "
+                                          "Bring your order number.")
+
     class Meta:
         verbose_name = "Church settings"
         verbose_name_plural = "Church settings"
@@ -270,6 +280,43 @@ class Gift(models.Model):
         if self.method == "mobile" and self.provider:
             return f"Mobile money · {self.get_provider_display()}"
         return self.get_method_display()
+
+    # ---- online payment steps (see church/online_payments.py)
+
+    @property
+    def payment_amount(self):
+        return self.amount
+
+    @property
+    def payment_reference(self):
+        """Unique per payment, e.g. TITHE-MOYO-12."""
+        return f"{self.reference}-{self.pk}"
+
+    @property
+    def is_paid(self):
+        return self.status == "received"
+
+    @property
+    def payment_state(self):
+        return {"received": "paid", "pending": "pending"}.get(self.status, "failed")
+
+    def payment_received(self, provider_reference="", provider_status=""):
+        self.status = "received"
+        self.confirmed_at = timezone.now()
+        if provider_reference:
+            self.provider_reference = provider_reference[:64]
+        if provider_status:
+            self.provider_status = provider_status[:40]
+        self.save()
+
+    def payment_update(self, state, provider_status=""):
+        """state is "pending" or "failed". Saves only when something changed."""
+        if self.is_paid:
+            return
+        provider_status = provider_status[:40]
+        if self.status != state or self.provider_status != provider_status:
+            self.status, self.provider_status = state, provider_status
+            self.save()
 
 
 class PrayerRequest(models.Model):

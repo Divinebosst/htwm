@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { updateTag } from "next/cache";
 import { API_URL } from "@/lib/api";
 
-const TAGS = new Set(["events", "services", "settings", "giving"]);
+const TAGS = new Set(["events", "services", "settings", "giving", "store"]);
 
 /**
  * After staff change something, refresh the cached public pages straight away

@@ -256,3 +256,36 @@ export const CheckIcon = (p: P) => (
     <path d="m5 12 5 5L20 7" />
   </svg>
 );
+
+export const BagIcon = (p: P) => (
+  <svg {...stroke} {...p}>
+    <path d="M5 8h14l-1.2 12.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9L5 8z" />
+    <path d="M9 10V6a3 3 0 0 1 6 0v4" />
+  </svg>
+);
+
+export const MinusIcon = (p: P) => (
+  <svg {...stroke} {...p}>
+    <path d="M5 12h14" />
+  </svg>
+);
+
+export const PlusIcon = (p: P) => (
+  <svg {...stroke} {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+export const TrashIcon = (p: P) => (
+  <svg {...stroke} {...p}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </svg>
+);
+
+export const TruckIcon = (p: P) => (
+  <svg {...stroke} {...p}>
+    <path d="M3 6h11v10H3zM14 10h4l3 3v3h-7" />
+    <circle cx="7" cy="18" r="2" />
+    <circle cx="17" cy="18" r="2" />
+  </svg>
+);

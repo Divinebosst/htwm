@@ -91,3 +91,11 @@ export function buildReference(code: string, name: string, anonymous: boolean) {
   const surname = words[words.length - 1].toUpperCase().replace(/[^A-Z]/g, "").slice(0, 12);
   return surname ? `${code}-${surname}` : code;
 }
+
+/** "15" + "USD" -> "$15.00" */
+export function money(amount: string | number, currency: string) {
+  const value = typeof amount === "number" ? amount : parseFloat(amount);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" }).format(
+    Number.isFinite(value) ? value : 0,
+  );
+}

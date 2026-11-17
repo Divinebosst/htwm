@@ -33,6 +33,10 @@ PERMISSIONS = {
     "gifts.view": {SYSTEM_ADMIN, ADMIN, PASTOR},
     "gifts.edit": {SYSTEM_ADMIN, ADMIN},
     "giving.edit": {SYSTEM_ADMIN, ADMIN},
+    # Store: items for sale and delivery settings; orders (they include buyers' contact details)
+    "store.edit": {SYSTEM_ADMIN, ADMIN},
+    "orders.view": {SYSTEM_ADMIN, ADMIN, PASTOR},
+    "orders.edit": {SYSTEM_ADMIN, ADMIN},
     # Church settings. Changing where money is sent is limited to System Admins.
     "settings.view": {SYSTEM_ADMIN, ADMIN},
     "settings.edit_contact": {SYSTEM_ADMIN, ADMIN},

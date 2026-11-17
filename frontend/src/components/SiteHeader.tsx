@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import logo from "@/assets/logo.png";
 import { CloseIcon, MenuIcon } from "./icons";
+import CartLink from "./store/CartLink";
 
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/#about", label: "About" },
   { href: "/events", label: "Events" },
+  { href: "/store", label: "Store" },
   { href: "/#services", label: "Services" },
   { href: "/#prayer", label: "Prayer" },
   { href: "#contact", label: "Contact" },
@@ -43,6 +45,7 @@ export default function SiteHeader() {
         <Link className="brand" href="/" aria-label="Heal The World Ministries International, home">
           <Brand />
         </Link>
+        <CartLink onClick={() => setOpen(false)} />
         <button
           className="nav-toggle"
           type="button"

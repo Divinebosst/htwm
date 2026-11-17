@@ -23,6 +23,7 @@ HIDDEN = "(hidden)"
 def _tracked():
     from accounts.models import StaffProfile
     from church.models import Event, Gift, GivingCategory, PrayerRequest, ServiceTime, SiteSettings
+    from store.models import Order, Product
 
     return {
         Event: {"type": "event", "exclude": {"created_at", "updated_at"}},
@@ -31,6 +32,13 @@ def _tracked():
         GivingCategory: {"type": "giving category"},
         Gift: {"type": "gift", "hide": {"giver_contact", "payer_phone"},
                "exclude": {"public_id", "poll_url", "otp_url"}},
+        Product: {"type": "store item", "exclude": {"created_at", "updated_at"}},
+        Order: {
+            "type": "order",
+            "hide": {"customer_name", "contact_phone", "email", "address", "notes", "payer_phone", "staff_notes"},
+            "exclude": {"public_id", "poll_url", "otp_url", "updated_at"},
+            "repr": lambda o: f"Order #{o.pk}",
+        },
         PrayerRequest: {
             "type": "prayer request",
             "hide": {"name", "contact", "message", "staff_notes"},

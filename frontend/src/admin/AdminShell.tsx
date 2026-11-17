@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import logo from "@/assets/logo.png";
 import {
+  BagIcon,
   CalendarIcon,
   ClockIcon,
   DashboardIcon,
@@ -18,6 +19,7 @@ import {
   SettingsIcon,
   SignOutIcon,
   TagIcon,
+  TruckIcon,
   UserIcon,
   UsersIcon,
 } from "@/components/icons";
@@ -31,6 +33,8 @@ export const NAV = [
   { href: "/admin/prayer", label: "Prayer requests", perm: "prayer.view", Icon: PrayerIcon },
   { href: "/admin/gifts", label: "Gifts", perm: "gifts.view", Icon: GiftIcon },
   { href: "/admin/giving", label: "Giving categories", perm: "giving.edit", Icon: TagIcon },
+  { href: "/admin/orders", label: "Store orders", perm: "orders.view", Icon: TruckIcon },
+  { href: "/admin/store", label: "Store items", perm: "store.edit", Icon: BagIcon },
   { href: "/admin/settings", label: "Church settings", perm: "settings.view", Icon: SettingsIcon },
   { href: "/admin/users", label: "Staff accounts", perm: "users.view", Icon: UsersIcon },
   { href: "/admin/audit", label: "Audit log", perm: "audit.view", Icon: LogIcon },

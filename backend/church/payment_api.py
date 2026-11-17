@@ -3,16 +3,14 @@ Online giving: PayPal (including cards) and mobile money through Paynow.
 
 A gift is recorded when the giver starts paying ("Waiting for payment") and is
 marked "Received" only when PayPal or Paynow confirms the money, never on the
-browser's word.
+browser's word. The payment steps themselves live in online_payments.py and
+are shared with store orders.
 """
 
 import re
-from datetime import timedelta
 from decimal import Decimal
 
-from django.conf import settings as django_settings
 from django.http import HttpResponse
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -21,19 +19,11 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from audit.context import as_system
-
+from . import online_payments as pay
 from . import paynow, paypal
 from .models import Gift, GivingCategory, SiteSettings, build_reference
 
-
-def site_url(request):
-    return (django_settings.SITE_URL or request.build_absolute_uri("/")).rstrip("/")
-
-
-def payment_reference(gift):
-    """Unique per payment, e.g. TITHE-MOYO-12."""
-    return f"{gift.reference}-{gift.pk}"
+site_url = pay.site_url
 
 
 def gift_label(gift):
@@ -46,6 +36,7 @@ def payload(gift, **extra):
     return {
         "id": str(gift.public_id),
         "status": gift.status,
+        "payment": gift.payment_state,
         "amount": f"{gift.amount:.2f}",
         "currency": gift.currency,
         "reference": gift.reference,
@@ -83,12 +74,22 @@ def zimbabwe_mobile(value):
     return digits
 
 
-class MobileDetailsSerializer(GiftDetailsSerializer):
+class WalletSerializer(serializers.Serializer):
+    """The mobile money wallet that pays."""
+
     provider = serializers.ChoiceField(choices=Gift.PROVIDERS)
     phone = serializers.CharField(max_length=20)
 
     def validate_phone(self, value):
         return zimbabwe_mobile(value)
+
+
+class MobileDetailsSerializer(GiftDetailsSerializer, WalletSerializer):
+    pass
+
+
+class OtpSerializer(serializers.Serializer):
+    otp = serializers.RegexField(r"^\d{4,10}$", error_messages={"invalid": "Enter the code from your SMS."})
 
 
 def new_gift(data, method, **extra):
@@ -107,55 +108,11 @@ def new_gift(data, method, **extra):
     )
 
 
-def mark_received(gift, provider_reference="", provider_status=""):
-    gift.status = "received"
-    gift.confirmed_at = timezone.now()
-    if provider_reference:
-        gift.provider_reference = provider_reference[:64]
-    if provider_status:
-        gift.provider_status = provider_status[:40]
-    gift.save()
-
-
-def apply_paynow_status(gift, data):
-    """Update a mobile money gift from a verified Paynow status message."""
-    if gift.status == "received":
-        return
-    result = paynow.outcome(data.get("status"))
-    reported = data.get("amount")
-    if result == "received" and reported is not None and Decimal(reported) != gift.amount:
-        gift.provider_status = "Amount mismatch"
-        gift.save()
-        return
-    if data.get("pollurl"):
-        gift.poll_url = data["pollurl"][:300]
-    if result == "received":
-        mark_received(gift, data.get("paynowreference", ""), data.get("status", ""))
-    else:
-        new_status = "failed" if result == "failed" else "pending"
-        reported_status = (data.get("status") or "")[:40]
-        if gift.status != new_status or gift.provider_status != reported_status:
-            gift.status = new_status
-            gift.provider_status = reported_status
-            gift.save()
-
-
-# PayPal orders expire after 3 hours and mobile money prompts after a few minutes.
-UNFINISHED_AFTER = timedelta(hours=24)
-
-
 def close_unfinished_payments():
-    """
-    Payments someone started but never finished (PayPal closed, phone prompt
-    ignored) stop counting as "waiting" after a day. If Paynow or PayPal later
-    confirms one after all, it is still marked as received.
-    """
-    cutoff = timezone.now() - UNFINISHED_AFTER
-    stale = Gift.objects.filter(status="pending", method__in=["paypal", "mobile"], created_at__lt=cutoff)
-    with as_system():
-        for gift in stale:
-            gift.status, gift.provider_status = "failed", "Not completed"
-            gift.save(update_fields=["status", "provider_status"])
+    pay.close_unfinished(Gift.objects.filter(status="pending"))
+
+
+DECLINED = {"detail": "The card or PayPal account was declined. Please try another one.", "code": "instrument_declined"}
 
 
 class PaymentView(APIView):
@@ -178,21 +135,10 @@ class PayPalCreateOrder(PaymentView):
         gift = new_gift(s.validated_data, "paypal")
         site = SiteSettings.load()
         try:
-            order_id = paypal.create_order(
-                amount=gift.amount,
-                currency=gift.currency,
-                reference=payment_reference(gift),
-                description=f"{gift_label(gift)} – {site.short_name}",
-                request_id=str(gift.public_id),
-                brand_name=site.church_name,
-            )
+            order_id = pay.start_paypal(gift, description=f"{gift_label(gift)} – {site.short_name}",
+                                        brand_name=site.church_name)
         except paypal.PayPalError as exc:
-            gift.status, gift.provider_status = "failed", "Order not created"
-            gift.save()
             return Response({"detail": str(exc)}, status=502)
-        gift.provider_order_id = order_id
-        gift.provider_status = "CREATED"
-        gift.save()
         return Response({"order_id": order_id, "gift": str(gift.public_id)}, status=201)
 
 
@@ -203,25 +149,12 @@ class PayPalCapture(PaymentView):
         gift = Gift.objects.select_related("category").filter(method="paypal", provider_order_id=order_id).first()
         if gift is None:
             return Response({"detail": "Payment not found."}, status=404)
-        if gift.status == "received":
-            return Response(payload(gift))
         try:
-            completed, capture_id, amount, currency, capture_status = paypal.capture_order(order_id)
+            pay.capture_paypal(gift)
         except paypal.PayPalError as exc:
             if exc.code == "INSTRUMENT_DECLINED":
-                return Response({"detail": "The card or PayPal account was declined. Please try another one.",
-                                 "code": "instrument_declined"}, status=422)
-            gift.status, gift.provider_status = "failed", (exc.code or "Capture failed")[:40]
-            gift.save()
+                return Response(DECLINED, status=422)
             return Response({"detail": str(exc)}, status=502)
-        if completed and amount == gift.amount and currency == gift.currency:
-            mark_received(gift, capture_id, capture_status)
-        elif capture_status == "PENDING":
-            gift.provider_reference, gift.provider_status = capture_id, "PENDING"
-            gift.save()
-        else:
-            gift.status, gift.provider_status = "failed", (capture_status or "Not completed")[:40]
-            gift.save()
         return Response(payload(gift))
 
 
@@ -238,42 +171,13 @@ class MobileStart(PaymentView):
         s.is_valid(raise_exception=True)
         data = s.validated_data
         gift = new_gift(data, "mobile", provider=data["provider"], payer_phone=data["phone"])
-        gift.provider_order_id = payment_reference(gift)
         base = site_url(request)
         try:
-            reply = paynow.start_mobile_payment(
-                reference=gift.provider_order_id,
-                amount=gift.amount,
-                info=gift_label(gift),
-                phone=data["phone"],
-                method=data["provider"],
-                result_url=f"{base}/api/payments/paynow/result",
-                return_url=f"{base}/give",
-                trace=gift.public_id.hex,
-            )
+            extra = pay.start_mobile(gift, info=gift_label(gift), result_url=f"{base}/api/payments/paynow/result",
+                                     return_url=f"{base}/give")
         except paynow.PaynowError as exc:
-            gift.status, gift.provider_status = "failed", str(exc)[:40]
-            gift.save()
             return Response({"detail": str(exc)}, status=400)
-
-        gift.poll_url = reply.get("pollurl", "")[:300]
-        gift.otp_url = reply.get("remoteotpurl", "")[:300]
-        gift.provider_status = reply.get("status", "Sent")[:40]
-        gift.save()
-
-        extra = {"next": "approve", "instructions": reply.get("instructions", "")}
-        if data["provider"] == "innbucks":
-            code = reply.get("authorizationcode", "")
-            extra.update(next="innbucks_code", authorization_code=code,
-                         authorization_expires=reply.get("authorizationexpires", ""),
-                         deep_link=f"com.innbucks.customer://purchase?paymentToken={code}" if code else "")
-        elif data["provider"] == "omari":
-            extra.update(next="omari_otp", otp_reference=reply.get("otpreference", ""))
         return Response(payload(gift, **extra), status=201)
-
-
-class OtpSerializer(serializers.Serializer):
-    otp = serializers.RegexField(r"^\d{4,10}$", error_messages={"invalid": "Enter the code from your SMS."})
 
 
 class MobileOtp(PaymentView):
@@ -288,10 +192,9 @@ class MobileOtp(PaymentView):
         s = OtpSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         try:
-            reply = paynow.submit_omari_otp(gift.otp_url, s.validated_data["otp"])
+            pay.submit_otp(gift, s.validated_data["otp"])
         except paynow.PaynowError as exc:
             return Response({"detail": str(exc)}, status=400)
-        apply_paynow_status(gift, reply)
         return Response(payload(gift))
 
 
@@ -306,25 +209,27 @@ class PaymentStatus(APIView):
         gift = Gift.objects.select_related("category").filter(public_id=public_id).first()
         if gift is None:
             return Response({"detail": "Payment not found."}, status=404)
-        if gift.status == "pending" and gift.method == "mobile" and gift.poll_url:
-            try:
-                apply_paynow_status(gift, paynow.check_status(gift.poll_url))
-            except paynow.PaynowError:
-                pass  # try again on the next check
+        pay.refresh_mobile(gift)
         return Response(payload(gift))
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class PaynowResult(View):
-    """POST /api/payments/paynow/result — Paynow tells us when a payment's status changes."""
+    """
+    POST /api/payments/paynow/result — Paynow tells us when a payment's status
+    changes. Used for both gifts and store orders.
+    """
 
     def post(self, request):
+        from store.models import Order
+
         pairs, data = paynow.parse_message(request.body.decode("utf-8", "replace"))
         if not paynow.hash_is_valid(pairs):
             return HttpResponse("Invalid hash", status=status.HTTP_400_BAD_REQUEST)
-        gift = Gift.objects.select_related("category").filter(
-            method="mobile", provider_order_id=data.get("reference", "")
-        ).first()
-        if gift is not None:
-            apply_paynow_status(gift, data)
+        reference = data.get("reference", "")
+        for model in (Gift, Order):
+            obj = model.objects.filter(method="mobile", provider_order_id=reference).first()
+            if obj is not None:
+                pay.apply_paynow_status(obj, data)
+                break
         return HttpResponse("OK")

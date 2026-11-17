@@ -60,6 +60,7 @@ export async function SiteFooter() {
             <ul>
               <li><Link href="/#about">About us</Link></li>
               <li><Link href="/events">Events</Link></li>
+              <li><Link href="/store">Church store</Link></li>
               <li><Link href="/#services">Service times</Link></li>
               <li><Link href="/#watch">Watch online</Link></li>
               <li><Link href="/#prayer">Prayer request</Link></li>

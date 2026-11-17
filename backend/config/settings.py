@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "church",
+    "store",
     "accounts",
     "audit",
 ]
@@ -146,6 +147,8 @@ REST_FRAMEWORK = {
         # Generous, because a whole congregation on the church Wi-Fi shares one address
         "gifts": os.environ.get("THROTTLE_GIFTS", "200/hour"),
         "payment_status": os.environ.get("THROTTLE_PAYMENT_STATUS", "3000/hour"),
+        "orders": os.environ.get("THROTTLE_ORDERS", "200/hour"),
+        "store": os.environ.get("THROTTLE_STORE", "1200/hour"),
         "prayer": os.environ.get("THROTTLE_PRAYER", "10/hour"),
         "login_burst": os.environ.get("THROTTLE_LOGIN_BURST", "8/minute"),
         "login_hourly": os.environ.get("THROTTLE_LOGIN_HOURLY", "40/hour"),

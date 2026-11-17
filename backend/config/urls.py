@@ -15,6 +15,7 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),  # Django's built-in admin, System Admins only
     path("api/auth/", include(auth_urlpatterns)),
     path("api/admin/", include("config.admin_api_urls")),
+    path("api/store/", include("store.urls")),
     path("api/", include("church.urls")),
 ]
 

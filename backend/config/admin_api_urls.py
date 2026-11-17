@@ -1,6 +1,6 @@
 """Staff-only API under /api/admin/ (used by the website's /admin pages)."""
 
-from django.urls import re_path
+from django.urls import include, re_path
 
 from accounts.urls import admin_urlpatterns as account_urls
 from audit.views import AuditLogList
@@ -22,4 +22,5 @@ urlpatterns = account_urls + [
     re_path(r"^giving-categories/(?P<pk>\d+)/?$", v.GivingCategoryAdminDetail.as_view(), name="admin-category"),
     re_path(r"^settings/?$", v.SettingsAdminView.as_view(), name="admin-settings"),
     re_path(r"^audit/?$", AuditLogList.as_view(), name="admin-audit"),
+    re_path(r"^store/", include("store.admin_urls")),
 ]

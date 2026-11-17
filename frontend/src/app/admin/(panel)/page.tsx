@@ -21,6 +21,12 @@ type Dashboard = {
     received_this_month: Record<string, string>;
     received_this_month_count: number;
   };
+  orders?: {
+    to_prepare_count: number;
+    ready_count: number;
+    sold_this_month: Record<string, string>;
+    sold_this_month_count: number;
+  };
   activity?: AuditEntry[];
   staff?: { active_count: number };
 };
@@ -74,6 +80,20 @@ export default function DashboardPage() {
                   <span>Received this month</span>
                   <strong>{totals(data.gifts.received_this_month)}</strong>
                   <small>{data.gifts.received_this_month_count} gifts confirmed</small>
+                </Link>
+              </>
+            )}
+            {data.orders && (
+              <>
+                <Link className={`adm-stat${data.orders.to_prepare_count ? " attention" : ""}`} href="/admin/orders">
+                  <span>Store orders to prepare</span>
+                  <strong>{data.orders.to_prepare_count}</strong>
+                  <small>{data.orders.ready_count} ready or on the way</small>
+                </Link>
+                <Link className="adm-stat" href="/admin/orders">
+                  <span>Store sales this month</span>
+                  <strong>{totals(data.orders.sold_this_month)}</strong>
+                  <small>{data.orders.sold_this_month_count} paid {data.orders.sold_this_month_count === 1 ? "order" : "orders"}</small>
                 </Link>
               </>
             )}

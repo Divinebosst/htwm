@@ -336,3 +336,12 @@
 .adm-login-card form { display: grid; gap: 14px; }
 .adm-login-card .adm-btn { width: 100%; min-height: 48px; font-size: 1.05rem; }
 .adm-login-foot { color: var(--muted); font-size: 0.92rem; }
+
+/* Store */
+.adm-thumb-cell { width: 64px; }
+.adm-thumb { display: block; width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--mist); border: 1px solid var(--line); }
+.adm-thumb-empty { border-style: dashed; }
+.adm-order-status { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: var(--muted); font-weight: 600; }
+.adm-order-items { margin-bottom: 18px; }
+.adm-order-items th, .adm-order-items td { padding-block: 8px; }
+.adm-order-total td { font-weight: 800; color: var(--ink); border-top: 2px solid var(--line); }

@@ -53,6 +53,12 @@ class SiteSettingsSerializer(serializers.BaseSerializer):
                     "services": split_commas(s.abroad_services),
                 },
             },
+            "store": {
+                "delivery_enabled": s.store_delivery_enabled,
+                "delivery_fee": f"{s.store_delivery_fee:.2f}",
+                "delivery_note": s.store_delivery_note,
+                "collect_note": s.store_collect_note,
+            },
         }
 
 

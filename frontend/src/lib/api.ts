@@ -20,6 +20,14 @@ export type Settings = {
   email: string;
   social: { facebook: string; youtube: string; website: string };
   giving: GivingSettings;
+  store: StoreSettings;
+};
+
+export type StoreSettings = {
+  delivery_enabled: boolean;
+  delivery_fee: string;
+  delivery_note: string;
+  collect_note: string;
 };
 
 export type GivingSettings = {
@@ -99,6 +107,7 @@ export const FALLBACK_SETTINGS: Settings = {
     paypal_mode: "sandbox",
     mobile_money_enabled: false,
   },
+  store: { delivery_enabled: false, delivery_fee: "0.00", delivery_note: "", collect_note: "" },
 };
 
 async function getJSON<T>(path: string, fallback: T): Promise<T> {
@@ -156,4 +165,38 @@ export async function getGivingCategories(): Promise<GivingCategory[]> {
   cacheLife("minutes");
   cacheTag("giving");
   return getJSON("/api/giving-categories", []);
+}
+
+// ---------------------------------------------------------------- store
+
+export type Product = {
+  slug: string;
+  name: string;
+  category: string;
+  category_label: string;
+  summary: string;
+  price: string;
+  image_url: string | null;
+  option_name: string;
+  options: string[];
+  stock_state: "in_stock" | "low" | "sold_out";
+  stock_left: number | null;
+  is_featured: boolean;
+};
+
+export type ProductDetail = Product & { description: string };
+
+export async function getProducts(): Promise<Product[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("store");
+  return getJSON("/api/store/products", []);
+}
+
+export async function getProduct(slug: string): Promise<ProductDetail | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("store");
+  if (!/^[-\w]+$/.test(slug)) return null;
+  return getJSON<ProductDetail | null>(`/api/store/products/${slug}`, null);
 }

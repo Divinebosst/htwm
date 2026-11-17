@@ -70,9 +70,9 @@ class DashboardView(StaffAPIView):
                 "total_count": prayers.count(),
             }
 
+        month_start = timezone.make_aware(datetime.combine(timezone.localdate().replace(day=1), time.min))
         if has_perm(user, "gifts.view"):
             close_unfinished_payments()
-            month_start = timezone.make_aware(datetime.combine(timezone.localdate().replace(day=1), time.min))
             pending = Gift.objects.filter(status="pending")
             received = Gift.objects.filter(status="received", confirmed_at__gte=month_start)
             data["gifts"] = {
@@ -80,6 +80,19 @@ class DashboardView(StaffAPIView):
                 "pending_totals": _money(pending.values("currency").annotate(total=Sum("amount"))),
                 "received_this_month": _money(received.values("currency").annotate(total=Sum("amount"))),
                 "received_this_month_count": received.count(),
+            }
+
+        if has_perm(user, "orders.view"):
+            from store.admin_api import close_unfinished_orders
+            from store.models import Order
+
+            close_unfinished_orders()
+            sold = Order.objects.filter(paid_at__gte=month_start).exclude(status="cancelled")
+            data["orders"] = {
+                "to_prepare_count": Order.objects.filter(status="paid").count(),
+                "ready_count": Order.objects.filter(status="ready").count(),
+                "sold_this_month": _money(sold.values("currency").annotate(total=Sum("total"))),
+                "sold_this_month_count": sold.count(),
             }
 
         if has_perm(user, "audit.view"):

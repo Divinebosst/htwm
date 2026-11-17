@@ -10,6 +10,9 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "gifts.view": "See gifts",
   "gifts.edit": "Confirm gifts",
   "giving.edit": "Edit giving categories",
+  "store.edit": "Add and edit store items",
+  "orders.view": "See store orders",
+  "orders.edit": "Update store orders",
   "settings.view": "See church settings",
   "settings.edit_contact": "Edit contact details",
   "settings.edit_payment": "Edit the giving currency and amounts",
@@ -20,8 +23,8 @@ export const PERMISSION_LABELS: Record<string, string> = {
 
 export const ROLE_SUMMARY: Record<string, string> = {
   system_admin: "Everything, including payment details and all staff accounts.",
-  admin: "Runs the church office: events, gifts, contact details and Pastor or Caretaker accounts.",
-  pastor: "Events, service times and every prayer request. Can see gifts.",
+  admin: "Runs the church office: events, gifts, the store, contact details and Pastor or Caretaker accounts.",
+  pastor: "Events, service times and every prayer request. Can see gifts and store orders.",
   caretaker: "Keeps events and service times up to date.",
 };
 

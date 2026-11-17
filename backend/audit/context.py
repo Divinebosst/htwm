@@ -54,6 +54,6 @@ def source_of(request):
         return "staff"
     if path.startswith("/django-admin/"):
         return "django_admin"
-    if path.startswith("/api/payments/"):
+    if path.startswith(("/api/payments/", "/api/store/checkout/", "/api/store/orders/")):
         return "payments"
     return "public"

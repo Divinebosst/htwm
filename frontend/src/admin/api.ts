@@ -231,4 +231,63 @@ export type StaffUser = {
   is_you: boolean;
 };
 
+export type AdminProduct = {
+  id: number;
+  slug: string;
+  name: string;
+  category: string;
+  category_label: string;
+  summary: string;
+  description: string;
+  price: string;
+  image_url: string | null;
+  option_name: string;
+  options: string;
+  stock: number | null;
+  stock_state: "in_stock" | "low" | "sold_out";
+  is_published: boolean;
+  is_featured: boolean;
+  sort_order: number;
+  sold: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminOrder = {
+  id: number;
+  status: string;
+  status_label: string;
+  customer_name: string;
+  contact_phone: string;
+  email: string;
+  fulfilment: "collect" | "delivery";
+  fulfilment_label: string;
+  address: string;
+  notes: string;
+  subtotal: string;
+  delivery_fee: string;
+  total: string;
+  currency: string;
+  method: string;
+  payment_label: string;
+  provider: string;
+  payer_phone: string;
+  provider_reference: string;
+  provider_status: string;
+  items: { name: string; option: string; quantity: number; unit_price: string; line_total: string; product: number | null }[];
+  item_count: number;
+  staff_notes: string;
+  created_at: string;
+  paid_at: string | null;
+  updated_at: string;
+};
+
+export type StoreSettingsData = {
+  currency: string;
+  store_delivery_enabled: boolean;
+  store_delivery_fee: string;
+  store_delivery_note: string;
+  store_collect_note: string;
+};
+
 export type Option = { value: string; label: string };
